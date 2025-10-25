@@ -57,4 +57,27 @@ public class UserServiceDtoMapper {
         .setUserId(dto.getUserId())
         .build();
   }
+
+  public static AddressDto fromProto(Address address) {
+    AddressDto dto = new AddressDto();
+    dto.setStreetName(address.getStreetName());
+    dto.setStreetNumber(address.getStreetNumber());
+    dto.setCity(address.getCity());
+    dto.setCountry(address.getCountry());
+    dto.setPostalCode(address.getPostalCode());
+    return dto;
+  }
+
+  public static GetUserResponseDto fromProto(GetUserResponse response) {
+    return GetUserResponseDto.builder()
+        .success(response.getSuccess())
+        .userId(response.getUserId())
+        .username(response.getUsername())
+        .firstName(response.getFirstName())
+        .lastName(response.getLastName())
+        .shippingAddress(fromProto(response.getShippingAddress()))
+        .email(response.getEmail())
+        .message(response.getMessage())
+        .build();
+  }
 }
