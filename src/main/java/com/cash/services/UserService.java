@@ -56,14 +56,14 @@ public class UserService {
         return userServiceStub.validateToken(request);
     }
 
-    public GetUserResponse getUser(String userId) {
+    public GetUserResponse getUser(int userId) {
         GetUserRequest request = GetUserRequest.newBuilder()
                 .setUserId(userId)
                 .build();
         return userServiceStub.getUser(request);
     }
 
-    public LogoutResponse logout(String jwt, String userId) {
+    public LogoutResponse logout(String jwt, int userId) {
         LogoutRequest request = LogoutRequest.newBuilder()
                 .setJwt(jwt)
                 .setUserId(userId)

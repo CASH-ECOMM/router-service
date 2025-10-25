@@ -5,6 +5,7 @@ import com.cash.services.UserService;
 import com.cash.mappers.UserServiceDtoMapper;
 import com.cash.grpc.userservice.*;
 import io.grpc.StatusRuntimeException;
+import io.swagger.v3.oas.annotations.headers.Header;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -72,12 +73,13 @@ public class UserController {
     }
 
     @GetMapping("/{userId}")
-    public ResponseEntity<?> getUser(@PathVariable String userId) {
+    public ResponseEntity<?> getUser(@PathVariable int userId) {
         try {
             GetUserResponse response = userService.getUser(userId);
 
             if (response.getSuccess()) {
-                return ResponseEntity.ok(response);
+                GetUserResponseDto dto = UserServiceDtoMapper.fromProto(response);
+                return ResponseEntity.ok(dto);
             } else {
                 return ResponseEntity.notFound().build();
             }
@@ -88,9 +90,21 @@ public class UserController {
     }
 
     @PostMapping("/validate-token")
-    public ResponseEntity<?> validateToken(@RequestHeader("Authorization") String token) {
+    public ResponseEntity<?> validateToken(
+            @RequestHeader(value = "Authorization", required = false) String token) {
         try {
-            String jwt = token.replace("Bearer ", "");
+            if (token == null || token.trim().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Authorization header is required"));
+            }
+
+            String jwt = token.replace("Bearer ", "").trim();
+
+            if (jwt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Token cannot be empty"));
+            }
+
             ValidateTokenResponse response = userService.validateToken(jwt);
 
             return ResponseEntity.ok(Map.of(
