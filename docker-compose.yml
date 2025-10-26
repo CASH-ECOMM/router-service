@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  router-service:
+    platform: linux/amd64
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: router-service
+    ports:
+      - "8080:8080"
