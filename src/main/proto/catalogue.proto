@@ -21,7 +21,6 @@ message SearchRequest {
 message CreateItemRequest {
   string title = 1;
   string description = 2;
-  int32 starting_price = 3;
   int32 duration_hours = 4;
   int32 seller_id = 5;
 }
