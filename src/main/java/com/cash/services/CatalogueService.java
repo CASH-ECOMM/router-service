@@ -1,21 +1,14 @@
 package com.cash.services;
 
 import com.cash.grpc.catalogue.*;
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
+import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Service;
 
 @Service
 public class CatalogueService {
 
-    private final CatalogueServiceGrpc.CatalogueServiceBlockingStub blockingStub;
-
-    public CatalogueService() {
-        ManagedChannel channel = ManagedChannelBuilder.forAddress("localhost", 50051)
-                .usePlaintext()
-                .build();
-        blockingStub = CatalogueServiceGrpc.newBlockingStub(channel);
-    }
+    @GrpcClient("router-service")
+    private CatalogueServiceGrpc.CatalogueServiceBlockingStub blockingStub;
 
     public ItemList getAllItems() {
         return blockingStub.getAllItems(Empty.newBuilder().build());
