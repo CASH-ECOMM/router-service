@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class CatalogueService {
 
-    @GrpcClient("router-service")
+    @GrpcClient("catalogue-service")
     private CatalogueServiceGrpc.CatalogueServiceBlockingStub blockingStub;
 
     public ItemList getAllItems() {
