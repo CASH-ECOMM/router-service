@@ -1,11 +1,14 @@
 package com.cash.controllers;
 
+import com.cash.config.AuthenticatedUser;
+import com.cash.config.BiddingSessionManager;
 import com.cash.dtos.*;
 import com.cash.services.UserService;
 import com.cash.mappers.UserServiceDtoMapper;
 import com.cash.grpc.userservice.*;
 import io.grpc.StatusRuntimeException;
-import io.swagger.v3.oas.annotations.headers.Header;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,14 +19,16 @@ import java.util.Map;
 @RequestMapping("/api/users")
 public class UserController {
     private final UserService userService;
+    private final BiddingSessionManager biddingSessionManager;
 
     @Autowired
-    public UserController(UserService userService) {
+    public UserController(UserService userService, BiddingSessionManager biddingSessionManager) {
         this.userService = userService;
+        this.biddingSessionManager = biddingSessionManager;
     }
 
     @PostMapping("/signin")
-    public ResponseEntity<?> signIn(@RequestBody SignInRequestDto dto) {
+    public ResponseEntity<?> signIn(@RequestBody SignInRequestDto dto, HttpSession session) {
         try {
             SignInRequest request = UserServiceDtoMapper.toProto(dto);
             SignInResponse response = userService.signIn(
@@ -31,6 +36,7 @@ public class UserController {
                     request.getPassword());
 
             if (response.getSuccess()) {
+                biddingSessionManager.clear(session);
                 return ResponseEntity.ok(Map.of(
                         "jwt", response.getJwt(),
                         "userId", response.getUserId(),
@@ -73,8 +79,13 @@ public class UserController {
     }
 
     @GetMapping("/{userId}")
-    public ResponseEntity<?> getUser(@PathVariable int userId) {
+    public ResponseEntity<?> getUser(@PathVariable int userId, HttpServletRequest request) {
         try {
+            Integer authenticatedUserId = AuthenticatedUser.getUserId(request);
+            if (authenticatedUserId == null || authenticatedUserId != userId) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "You can only access your own profile"));
+            }
             GetUserResponse response = userService.getUser(userId);
 
             if (response.getSuccess()) {
@@ -159,13 +170,19 @@ public class UserController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(@RequestBody LogoutRequestDto dto) {
+    public ResponseEntity<?> logout(@RequestBody LogoutRequestDto dto, HttpServletRequest request,
+            HttpSession session) {
         try {
-            LogoutRequest request = UserServiceDtoMapper.toProto(dto);
+            Integer authenticatedUserId = AuthenticatedUser.getUserId(request);
+            if (authenticatedUserId == null || dto.getUserId() != authenticatedUserId) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "You can only logout your own session"));
+            }
+            LogoutRequest logoutRequest = UserServiceDtoMapper.toProto(dto);
             LogoutResponse response = userService.logout(
-                    request.getJwt(),
-                    request.getUserId());
-
+                    logoutRequest.getJwt(),
+                    authenticatedUserId);
+            biddingSessionManager.clear(session);
             return ResponseEntity.ok(Map.of("message", response.getMessage()));
         } catch (StatusRuntimeException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
