@@ -1,5 +1,6 @@
 package com.cash.services;
 
+
 import com.cash.grpc.catalogue.*;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Service;
@@ -21,4 +22,11 @@ public class CatalogueService {
     public ItemResponse createItem(CreateItemRequest request) {
         return blockingStub.createItem(request);
     }
+    public ItemResponse getItem(int id) {
+        GetItemRequest request = GetItemRequest.newBuilder()
+            .setId(id)
+            .build();
+     return blockingStub.getItem(request);
+}
+
 }
