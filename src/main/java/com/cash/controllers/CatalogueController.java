@@ -6,6 +6,7 @@ import com.cash.mappers.CatalogueServiceDtoMapper;
 import com.cash.services.CatalogueService;
 import com.cash.grpc.catalogue.*;
 
+
 import io.grpc.StatusRuntimeException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -62,4 +63,17 @@ public class CatalogueController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
+
+    @GetMapping("/items/{id}")
+    public ResponseEntity<?> getItem(@PathVariable int id) {
+        try {
+            ItemResponse response = catalogueService.getItem(id);
+            CatalogueItemResponseDto item = CatalogueServiceDtoMapper.fromProto(response);
+            return ResponseEntity.ok(item);
+        } catch (StatusRuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+    
 }
