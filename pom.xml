@@ -57,6 +57,7 @@
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
+	
 
 	<dependencies>
 		<!-- Spring Boot Starter -->

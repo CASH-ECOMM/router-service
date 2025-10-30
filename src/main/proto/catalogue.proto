@@ -4,7 +4,7 @@ option java_package = "com.cash.grpc.catalogue";
 option java_multiple_files = true;
 option java_outer_classname = "CatalogueServiceProto";
 
-package catalogue;
+package app.grpc.catalogue;
 
 service CatalogueService {
   rpc GetAllItems(Empty) returns (ItemList);
