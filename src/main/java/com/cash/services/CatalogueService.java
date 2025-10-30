@@ -28,4 +28,11 @@ public class CatalogueService {
     public ItemResponse createItem(CreateItemRequest request) {
         return blockingStub.createItem(request);
     }
+    public ItemResponse getItem(int id) {
+        GetItemRequest request = GetItemRequest.newBuilder()
+            .setId(id)
+            .build();
+     return blockingStub.getItem(request);
+}
+
 }

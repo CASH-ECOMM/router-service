@@ -10,9 +10,13 @@ service CatalogueService {
   rpc GetAllItems(Empty) returns (ItemList);
   rpc SearchItems(SearchRequest) returns (ItemList);
   rpc CreateItem(CreateItemRequest) returns (ItemResponse);
+  rpc GetItem(GetItemRequest) returns (ItemResponse);
 }
 
 message Empty {}
+message GetItemRequest { 
+  int32 id = 1;
+}
 
 message SearchRequest {
   string keyword = 1;
@@ -21,7 +25,7 @@ message SearchRequest {
 message CreateItemRequest {
   string title = 1;
   string description = 2;
-  double starting_price = 3;
+  int32 starting_price = 3;
   int32 duration_hours = 4;
   int32 seller_id = 5;
 }
