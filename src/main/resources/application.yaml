@@ -1,5 +1,5 @@
 grpc:
   client:
-    user-service:
-      address: 'static://localhost:50051'
+    payment-service:
+      address: static://localhost:9090
       negotiationType: plaintext
