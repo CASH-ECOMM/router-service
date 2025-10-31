@@ -3,6 +3,8 @@ package com.cash.controllers;
 import com.ecommerce.payment.grpc.*;
 import com.cash.dtos.PaymentRequestDTO;
 import com.cash.dtos.PaymentResponseDTO;
+import com.cash.mappers.PaymentServiceDtoMapper;               // CHANGE: use mapper
+import com.cash.services.PaymentService;
 import io.grpc.ManagedChannel;
 import io.grpc.StatusRuntimeException;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,17 +31,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Payment Router", description = "Payment routing endpoints for payment processing")
 public class PaymentRouterController {
 
-
-    @GrpcClient("payment-service")
-    private PaymentServiceGrpc.PaymentServiceBlockingStub paymentStub;
-
-
-//    @Qualifier("userServiceChannel")
-//    private final ManagedChannel userServiceChannel;
-//
-//    @Qualifier("catalogueServiceChannel")
-//    private final ManagedChannel catalogueServiceChannel;
-
+    private final PaymentService paymentClient;
     /**
      * Use Case 5: Process Payment
      * Receives payment request from UI, aggregates data from other services,
@@ -81,19 +73,24 @@ public class PaymentRouterController {
             // Calculate shipping cost based on type
             int shippingCost = calculateShippingCost(request.getShippingType(), itemDetails.getBaseShippingCost());
 
+            PaymentRequest grpcReq = PaymentServiceDtoMapper.toProto(
+                    request,
+                    userInfo,
+                    itemDetails.getItemId(),
+                    itemDetails.getItemCost(),               // int (whole dollars)
+                    shippingCost,                     // int (whole dollars)
+                    itemDetails.getEstimatedShippingDays()
+            );
+
             // Build gRPC payment request
-            PaymentRequest grpcRequest = buildGrpcPaymentRequest(request, userInfo, itemDetails, shippingCost);
+            PaymentResponse grpcResp = paymentClient.processPayment(grpcReq);
 
             // Call Payment Service via gRPC
-            PaymentResponse grpcResponse = paymentStub.processPayment(grpcRequest);
+            PaymentResponseDTO dto = PaymentServiceDtoMapper.fromProto(grpcResp);
 
+            log.info("Payment processed successfully with ID: {}", dto.getPaymentId());
 
-            // Convert gRPC response to REST DTO
-            PaymentResponseDTO responseDTO = convertToDTO(grpcResponse);
-
-            log.info("Payment processed successfully with ID: {}", responseDTO.getPaymentId());
-
-            return ResponseEntity.ok(responseDTO);
+            return ResponseEntity.ok(dto);
 
         } catch (StatusRuntimeException e) {
             log.error("gRPC error while processing payment", e);
@@ -137,16 +134,15 @@ public class PaymentRouterController {
         log.info("Retrieving payment with ID: {}", paymentId);
 
         try {
-            GetPaymentRequest grpcRequest = GetPaymentRequest.newBuilder().setPaymentId(paymentId).build();
-            PaymentResponse grpcResponse = paymentStub.getPaymentById(grpcRequest);
-            if (!grpcResponse.getSuccess()) {
+            PaymentResponse grpcResp = paymentClient.getPaymentById(paymentId);
+            if (!grpcResp.getSuccess()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(convertToDTO(grpcResponse));
+                        .body(PaymentServiceDtoMapper.fromProto(grpcResp)); // CHANGE: mapper
             }
 
-            return ResponseEntity.ok(convertToDTO(grpcResponse));
+            return ResponseEntity.ok(PaymentServiceDtoMapper.fromProto(grpcResp));
 
-        } catch (StatusRuntimeException e) {
+    } catch (StatusRuntimeException e) {
             log.error("gRPC error while retrieving payment", e);
             PaymentResponseDTO errorResponse = PaymentResponseDTO.builder()
                     .success(false)
@@ -172,16 +168,13 @@ public class PaymentRouterController {
         log.info("Retrieving payment history for user: {}", userId);
 
         try {
-            PaymentHistoryRequest grpcRequest = PaymentHistoryRequest.newBuilder()
-                    .setUserId(userId)
-                    .setPage(page)
-                    .setSize(size)
-                    .build();
+            PaymentHistoryResponse resp = paymentClient.getHistory(userId, page, size);
 
-            PaymentHistoryResponse grpcResponse = paymentStub.getPaymentHistory(grpcRequest);
 
             return ResponseEntity.ok(
-                    grpcResponse.getPaymentsList().stream().map(this::convertToDTO).toList()
+                    resp.getPaymentsList().stream()
+                            .map(PaymentServiceDtoMapper::fromProto)
+                            .toList()
             );
 
         } catch (StatusRuntimeException e) {
@@ -233,68 +226,6 @@ public class PaymentRouterController {
         return baseShippingCost;
     }
 
-    /**
-     * Build gRPC PaymentRequest from REST request and aggregated data
-     */
-    private PaymentRequest buildGrpcPaymentRequest(
-            PaymentRequestDTO request,
-            UserInfo userInfo,
-            ItemDetails itemDetails,
-            int shippingCost) {
-
-        CreditCardInfo creditCardInfo = CreditCardInfo.newBuilder()
-                .setCardNumber(request.getCreditCard().getCardNumber())
-                .setNameOnCard(request.getCreditCard().getNameOnCard())
-                .setExpiryDate(request.getCreditCard().getExpiryDate())
-                .setSecurityCode(request.getCreditCard().getSecurityCode())
-                .build();
-
-        ShippingInfo shippingInfo = ShippingInfo.newBuilder()
-                .setShippingType(request.getShippingType() == PaymentRequestDTO.ShippingTypeDTO.EXPEDITED
-                        ? ShippingType.EXPEDITED : ShippingType.REGULAR)
-                .setShippingCost(shippingCost)
-                .setEstimatedDays(itemDetails.getEstimatedShippingDays())
-                .build();
-
-        return PaymentRequest.newBuilder()
-                .setUserInfo(userInfo)
-                .setItemId(itemDetails.getItemId())
-                .setItemCost(itemDetails.getItemCost())
-                .setShippingInfo(shippingInfo)
-                .setCreditCardInfo(creditCardInfo)
-                .build();
-    }
-
-    /**
-     * Convert gRPC PaymentResponse to REST DTO
-     */
-    private PaymentResponseDTO convertToDTO(PaymentResponse grpcResponse) {
-        PaymentResponseDTO.PaymentResponseDTOBuilder builder = PaymentResponseDTO.builder()
-                .success(grpcResponse.getSuccess())
-                .paymentId(grpcResponse.getPaymentId())
-                .message(grpcResponse.getMessage())
-                .transactionDate(grpcResponse.getTransactionDate())
-                .shippingMessage(grpcResponse.getShippingMessage());
-
-        if (grpcResponse.hasReceiptInfo()) {
-            ReceiptInfo receiptInfo = grpcResponse.getReceiptInfo();
-            PaymentResponseDTO.ReceiptDTO receiptDTO = PaymentResponseDTO.ReceiptDTO.builder()
-                    .receiptId(receiptInfo.getReceiptId())
-                    .firstName(receiptInfo.getFirstName())
-                    .lastName(receiptInfo.getLastName())
-                    .address(receiptInfo.getFullAddress())
-                    .itemCost(receiptInfo.getItemCost())
-                    .shippingCost(receiptInfo.getShippingCost())
-                    .hstAmount(receiptInfo.getHstAmount())
-                    .totalPaid(receiptInfo.getTotalPaid())
-                    .itemId(receiptInfo.getItemId())
-                    .build();
-
-            builder.receipt(receiptDTO);
-        }
-
-        return builder.build();
-    }
 
     /**
      * Helper class to hold item details from Catalogue Service
