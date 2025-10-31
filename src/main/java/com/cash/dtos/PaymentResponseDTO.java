@@ -60,13 +60,13 @@ public class PaymentResponseDTO {
         @JsonProperty("address")
         private String address;
 
-        @Schema(description = "Item cost", example = "99.99")
+        @Schema(description = "Item cost", example = "99")
         @JsonProperty("item_cost")
-        private double itemCost;
+        private int itemCost;
 
-        @Schema(description = "Shipping cost", example = "15.00")
+        @Schema(description = "Shipping cost", example = "15")
         @JsonProperty("shipping_cost")
-        private double shippingCost;
+        private int shippingCost;
 
         @Schema(description = "HST amount (13%)", example = "14.95")
         @JsonProperty("hst_amount")

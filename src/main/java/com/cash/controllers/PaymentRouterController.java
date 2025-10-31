@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import net.devh.boot.grpc.client.inject.GrpcClient;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,8 +29,10 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Payment Router", description = "Payment routing endpoints for payment processing")
 public class PaymentRouterController {
 
-    @Qualifier("paymentServiceChannel")
-    private final ManagedChannel paymentServiceChannel;
+
+    @GrpcClient("payment-service")
+    private PaymentServiceGrpc.PaymentServiceBlockingStub paymentStub;
+
 
 //    @Qualifier("userServiceChannel")
 //    private final ManagedChannel userServiceChannel;
@@ -76,21 +79,14 @@ public class PaymentRouterController {
             ItemDetails itemDetails = getItemDetailsFromCatalogueService(request.getItemId());
 
             // Calculate shipping cost based on type
-            double shippingCost = calculateShippingCost(
-                    request.getShippingType(),
-                    itemDetails.getBaseShippingCost()
-            );
+            int shippingCost = calculateShippingCost(request.getShippingType(), itemDetails.getBaseShippingCost());
 
             // Build gRPC payment request
-            PaymentRequest grpcRequest = buildGrpcPaymentRequest(
-                    request, userInfo, itemDetails, shippingCost
-            );
+            PaymentRequest grpcRequest = buildGrpcPaymentRequest(request, userInfo, itemDetails, shippingCost);
 
             // Call Payment Service via gRPC
-            PaymentServiceGrpc.PaymentServiceBlockingStub paymentStub =
-                    PaymentServiceGrpc.newBlockingStub(paymentServiceChannel);
-
             PaymentResponse grpcResponse = paymentStub.processPayment(grpcRequest);
+
 
             // Convert gRPC response to REST DTO
             PaymentResponseDTO responseDTO = convertToDTO(grpcResponse);
@@ -141,22 +137,14 @@ public class PaymentRouterController {
         log.info("Retrieving payment with ID: {}", paymentId);
 
         try {
-            PaymentServiceGrpc.PaymentServiceBlockingStub paymentStub =
-                    PaymentServiceGrpc.newBlockingStub(paymentServiceChannel);
-
-            GetPaymentRequest grpcRequest = GetPaymentRequest.newBuilder()
-                    .setPaymentId(paymentId)
-                    .build();
-
+            GetPaymentRequest grpcRequest = GetPaymentRequest.newBuilder().setPaymentId(paymentId).build();
             PaymentResponse grpcResponse = paymentStub.getPaymentById(grpcRequest);
-
             if (!grpcResponse.getSuccess()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(convertToDTO(grpcResponse));
             }
 
-            PaymentResponseDTO responseDTO = convertToDTO(grpcResponse);
-            return ResponseEntity.ok(responseDTO);
+            return ResponseEntity.ok(convertToDTO(grpcResponse));
 
         } catch (StatusRuntimeException e) {
             log.error("gRPC error while retrieving payment", e);
@@ -184,9 +172,6 @@ public class PaymentRouterController {
         log.info("Retrieving payment history for user: {}", userId);
 
         try {
-            PaymentServiceGrpc.PaymentServiceBlockingStub paymentStub =
-                    PaymentServiceGrpc.newBlockingStub(paymentServiceChannel);
-
             PaymentHistoryRequest grpcRequest = PaymentHistoryRequest.newBuilder()
                     .setUserId(userId)
                     .setPage(page)
@@ -195,9 +180,9 @@ public class PaymentRouterController {
 
             PaymentHistoryResponse grpcResponse = paymentStub.getPaymentHistory(grpcRequest);
 
-            return ResponseEntity.ok(grpcResponse.getPaymentsList().stream()
-                    .map(this::convertToDTO)
-                    .toList());
+            return ResponseEntity.ok(
+                    grpcResponse.getPaymentsList().stream().map(this::convertToDTO).toList()
+            );
 
         } catch (StatusRuntimeException e) {
             log.error("gRPC error while retrieving payment history", e);
@@ -219,7 +204,7 @@ public class PaymentRouterController {
                 .setFirstName("John")
                 .setLastName("Doe")
                 .setStreet("Main Street")
-                .setNumber("123")
+                .setNumber(123)
                 .setProvince("Ontario")
                 .setCountry("Canada")
                 .setPostalCode("M5H 2N2")
@@ -234,17 +219,17 @@ public class PaymentRouterController {
         // TODO: Replace with actual gRPC call to Catalogue Service
         log.debug("Fetching item details for item ID: {}", itemId);
 
-        return new ItemDetails(itemId, 99.99, 15.0, 5);
+        return new ItemDetails(itemId, 100, 15, 5);
     }
 
     /**
      * Calculate shipping cost with expedited surcharge
      */
-    private double calculateShippingCost(PaymentRequestDTO.ShippingTypeDTO shippingType,
-                                         double baseShippingCost) {
-        if (shippingType == PaymentRequestDTO.ShippingTypeDTO.EXPEDITED) {
-            return baseShippingCost; // Surcharge will be added by Payment Service
-        }
+    private int calculateShippingCost(PaymentRequestDTO.ShippingTypeDTO shippingType,
+                                         int baseShippingCost) {
+//        if (shippingType == PaymentRequestDTO.ShippingTypeDTO.EXPEDITED) {
+//            return baseShippingCost; // Surcharge will be added by Payment Service
+//        }
         return baseShippingCost;
     }
 
@@ -255,7 +240,7 @@ public class PaymentRouterController {
             PaymentRequestDTO request,
             UserInfo userInfo,
             ItemDetails itemDetails,
-            double shippingCost) {
+            int shippingCost) {
 
         CreditCardInfo creditCardInfo = CreditCardInfo.newBuilder()
                 .setCardNumber(request.getCreditCard().getCardNumber())
@@ -316,11 +301,11 @@ public class PaymentRouterController {
      */
     private static class ItemDetails {
         private final String itemId;
-        private final double itemCost;
-        private final double baseShippingCost;
+        private final int itemCost;
+        private final int baseShippingCost;
         private final int estimatedShippingDays;
 
-        public ItemDetails(String itemId, double itemCost, double baseShippingCost, int estimatedShippingDays) {
+        public ItemDetails(String itemId, int itemCost, int baseShippingCost, int estimatedShippingDays) {
             this.itemId = itemId;
             this.itemCost = itemCost;
             this.baseShippingCost = baseShippingCost;
@@ -328,8 +313,8 @@ public class PaymentRouterController {
         }
 
         public String getItemId() { return itemId; }
-        public double getItemCost() { return itemCost; }
-        public double getBaseShippingCost() { return baseShippingCost; }
+        public int getItemCost() { return itemCost; }
+        public int getBaseShippingCost() { return baseShippingCost; }
         public int getEstimatedShippingDays() { return estimatedShippingDays; }
     }
 }

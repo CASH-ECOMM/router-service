@@ -18,7 +18,7 @@ message PaymentRequest {
 
   // Item and Cost Information
   string item_id = 2;
-  double item_cost = 3;
+  int32  item_cost = 3;
   ShippingInfo shipping_info = 4;
 
   // Credit Card Information
@@ -30,7 +30,7 @@ message UserInfo {
   string first_name = 1;
   string last_name = 2;
   string street = 3;
-  string number = 4;
+  int32  number = 4;
   string province = 5;
   string country = 6;
   string postal_code = 7;
@@ -40,7 +40,7 @@ message UserInfo {
 // Shipping Information
 message ShippingInfo {
   ShippingType shipping_type = 1;
-  double shipping_cost = 2;
+  int32 shipping_cost = 2;
   int32 estimated_days = 3;
 }
 
@@ -73,8 +73,8 @@ message ReceiptInfo {
   string first_name = 2;
   string last_name = 3;
   string full_address = 4;
-  double item_cost = 5;
-  double shipping_cost = 6;
+  int32  item_cost = 5;
+  int32  shipping_cost = 6;
   double hst_amount = 7;
   double total_paid = 8;
   string item_id = 9;
