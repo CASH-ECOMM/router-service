@@ -80,5 +80,6 @@ public class PaymentResponseDTO {
         @JsonProperty("item_id")
         private String itemId;
     }
+
 }
 
