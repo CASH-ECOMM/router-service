@@ -46,8 +46,15 @@ public class AuctionController {
 
             StartAuctionRequest auctionRequest = AuctionServiceDtoMapper.toProto(dto);
 
-            // Gets the item from the catalogue service
-            ItemResponse item = catalogueService.getItem(auctionRequest.getCatalogueId());
+            ItemResponse item;
+
+            try {
+                // Gets the item from the catalogue service
+                item = catalogueService.getItem(auctionRequest.getCatalogueId());
+            } catch (StatusRuntimeException e) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Item not found in catalogue."));
+            }
 
             String endTime = item.getEndTime();
 
@@ -63,7 +70,6 @@ public class AuctionController {
                     authUser,
                     auctionRequest.getCatalogueId(),
                     item.getStartingPrice(),
-                    //auctionRequest.getEndTime()
                     protoTimestamp    // Converted end time from string to protobuf Timestamp
             );
 
@@ -99,7 +105,15 @@ public class AuctionController {
                         .body(Map.of("error", "You can only bid on one auction item at a time. Please finish bidding on your current item before placing a bid on another."));
             }
 
-            ItemResponse item = catalogueService.getItem(bidRequest.getCatalogueId());
+            ItemResponse item;
+
+            try {
+                // Gets the item from the catalogue service
+                item = catalogueService.getItem(bidRequest.getCatalogueId());
+            } catch (StatusRuntimeException e) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Item not found in catalogue."));
+            }
 
             // Checks if the authenticated user is the seller of the item
             if (item.getSellerId() == authUser) {
