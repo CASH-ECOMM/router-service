@@ -18,9 +18,9 @@ public class PaymentResponseDTO {
     @JsonProperty("success")
     private boolean success;
 
-    @Schema(description = "Payment ID", example = "pay-789")
+    @Schema(description = "Payment ID", example = "123456789")
     @JsonProperty("payment_id")
-    private String paymentId;
+    private Integer paymentId;
 
     @Schema(description = "Response message")
     @JsonProperty("message")
@@ -46,7 +46,7 @@ public class PaymentResponseDTO {
 
         @Schema(description = "Receipt ID")
         @JsonProperty("receipt_id")
-        private String receiptId;
+        private Integer receiptId;
 
         @Schema(description = "Customer first name")
         @JsonProperty("first_name")
@@ -78,7 +78,7 @@ public class PaymentResponseDTO {
 
         @Schema(description = "Item ID")
         @JsonProperty("item_id")
-        private String itemId;
+        private Integer itemId;
     }
 
 }

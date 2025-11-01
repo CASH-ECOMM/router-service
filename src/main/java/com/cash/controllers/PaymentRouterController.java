@@ -1,13 +1,18 @@
 package com.cash.controllers;
 
+import com.cash.dtos.TotalCostDTO;
 import com.ecommerce.payment.grpc.*;
 import com.cash.dtos.PaymentRequestDTO;
 import com.cash.dtos.PaymentResponseDTO;
 import com.cash.mappers.PaymentServiceDtoMapper;
 import com.cash.services.PaymentService;
+import com.cash.services.CatalogueService;
+import com.cash.grpc.catalogue.ItemResponse;
+
 import io.grpc.ManagedChannel;
 import io.grpc.StatusRuntimeException;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -23,6 +28,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import com.cash.grpc.userservice.GetUserResponse;
+import com.cash.grpc.userservice.Address;
+
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/payments")
 @RequiredArgsConstructor
@@ -32,6 +42,7 @@ import org.springframework.web.bind.annotation.*;
 public class PaymentRouterController {
 
     private final PaymentService paymentClient;
+    private final CatalogueService catalogueService;
     /**
      * Use Case 5: Process Payment
      * Receives payment request from UI, aggregates data from other services,
@@ -65,7 +76,7 @@ public class PaymentRouterController {
 
         try {
             // Get user information from User Service (mock for now)
-            UserInfo userInfo = getUserInfoFromUserService(request.getUserId());
+            GetUserResponse user = getUserFromUserService(request.getUserId());
 
             // Get item details from Catalogue Service (mock for now)
             ItemDetails itemDetails = getItemDetailsFromCatalogueService(request.getItemId());
@@ -75,7 +86,7 @@ public class PaymentRouterController {
 
             PaymentRequest grpcReq = PaymentServiceDtoMapper.toProto(
                     request,
-                    userInfo,
+                    user,
                     itemDetails.getItemId(),
                     itemDetails.getItemCost(),               // int (whole dollars)
                     shippingCost,                     // int (whole dollars)
@@ -111,6 +122,61 @@ public class PaymentRouterController {
     }
 
     /**
+     * Estimate total cost (item + shipping + HST)
+     * Uses the same aggregation as /process but calls CalculateTotalCost RPC.
+     */
+    @PostMapping("/total-cost")
+    @Operation(
+            summary = "Estimate total cost",
+            description = "Returns item cost, shipping, HST rate/amount, and total without charging the card"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Total cost calculated",
+                    content = @Content(schema = @Schema(implementation = TotalCostDTO.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<?> calculateTotalCost(@Valid @RequestBody PaymentRequestDTO request) {
+        log.info("Calculating total cost for user: {} and item: {}", request.getUserId(), request.getItemId());
+
+        try {
+            // Same aggregation: get user & item (mocked here; replace with real gRPC calls)
+            GetUserResponse user = getUserFromUserService(request.getUserId());
+            ItemDetails itemDetails = getItemDetailsFromCatalogueService(request.getItemId());
+
+            int shippingCost = calculateShippingCost(request.getShippingType(), itemDetails.getBaseShippingCost());
+
+            // Build proto request (province defaulted to 'Ontario' inside mapper)
+            PaymentRequest grpcReq = PaymentServiceDtoMapper.toProto(
+                    request,
+                    user,
+                    itemDetails.getItemId(),
+                    itemDetails.getItemCost(),
+                    shippingCost,
+                    itemDetails.getEstimatedShippingDays()
+            );
+
+            // Call RPC
+            TotalCostResponse rpcResp = paymentClient.calculateTotalCost(grpcReq);
+
+            // Map to REST DTO
+            TotalCostDTO dto = PaymentServiceDtoMapper.fromProto(rpcResp);
+
+            return ResponseEntity.ok(dto);
+
+        } catch (StatusRuntimeException e) {
+            log.error("gRPC error while calculating total cost", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Payment service error: " + e.getStatus().getDescription()));
+        } catch (Exception e) {
+            log.error("Unexpected error while calculating total cost", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
      * Use Case 6: Get Payment Receipt
      * Retrieve payment details and receipt information
      */
@@ -130,11 +196,13 @@ public class PaymentRouterController {
                     description = "Payment not found"
             )
     })
-    public ResponseEntity<PaymentResponseDTO> getPayment(@PathVariable String paymentId) {
+    public ResponseEntity<PaymentResponseDTO> getReceipt(
+            @Parameter(name = "paymentId", description = "Get Receipt for each payment", required = true)
+            @PathVariable String paymentId) {
         log.info("Retrieving payment with ID: {}", paymentId);
 
         try {
-            PaymentResponse grpcResp = paymentClient.getPaymentById(paymentId);
+            PaymentResponse grpcResp = paymentClient.getPaymentById(Integer.parseInt(paymentId));
             if (!grpcResp.getSuccess()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(PaymentServiceDtoMapper.fromProto(grpcResp)); // CHANGE: mapper
@@ -161,7 +229,7 @@ public class PaymentRouterController {
             description = "Retrieve payment history for a user"
     )
     public ResponseEntity<?> getPaymentHistory(
-            @PathVariable String userId,
+            @PathVariable int userId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
@@ -188,19 +256,26 @@ public class PaymentRouterController {
      * Mock: Get user information from User Service
      * In production, this would call the actual User Service via gRPC
      */
-    private UserInfo getUserInfoFromUserService(String userId) {
-        // Replace with actual gRPC call to User Service
+    private GetUserResponse getUserFromUserService(int userId) {
         log.debug("Fetching user info for user ID: {}", userId);
 
-        return UserInfo.newBuilder()
-                .setUserId(userId)
-                .setFirstName("John")
-                .setLastName("Doe")
-                .setStreet("Main Street")
-                .setNumber(123)
-                .setProvince("Ontario")
+        Address shipping = Address.newBuilder()
+                .setStreetName("Main Street")
+                .setStreetNumber("123")
+                .setCity("Toronto")
                 .setCountry("Canada")
                 .setPostalCode("M5H 2N2")
+                .build();
+
+        return GetUserResponse.newBuilder()
+                .setSuccess(true)
+                .setUserId(userId)
+                .setUsername("john.doe")
+                .setFirstName("John")
+                .setLastName("Doe")
+                .setEmail("john.doe@example.com")
+                .setShippingAddress(shipping)
+                .setMessage("mock")
                 .build();
     }
 
@@ -208,11 +283,18 @@ public class PaymentRouterController {
      * Mock: Get item details from Catalogue Service
      * In production, this would call the actual Catalogue Service via gRPC
      */
-    private ItemDetails getItemDetailsFromCatalogueService(String itemId) {
-        // TODO: Replace with actual gRPC call to Catalogue Service
+    private ItemDetails getItemDetailsFromCatalogueService(int itemId) {
         log.debug("Fetching item details for item ID: {}", itemId);
 
-        return new ItemDetails(itemId, 100, 15, 5);
+        ItemResponse ir = catalogueService.getItem(itemId);
+
+
+        int itemCost = ir.getCurrentPrice() != 0 ? ir.getCurrentPrice()
+                : (ir.getStartingPrice() != 0 ? ir.getStartingPrice() : 0);
+        int shippingCost = ir.getShippingCost();
+        int shippingDays = ir.getShippingTime() != 0 ? ir.getShippingTime() : 5;
+
+        return new ItemDetails(ir.getId(), itemCost, shippingCost, shippingDays);
     }
 
     /**
@@ -220,9 +302,6 @@ public class PaymentRouterController {
      */
     private int calculateShippingCost(PaymentRequestDTO.ShippingTypeDTO shippingType,
                                       int baseShippingCost) {
-//        if (shippingType == PaymentRequestDTO.ShippingTypeDTO.EXPEDITED) {
-//            return baseShippingCost; // Surcharge will be added by Payment Service
-//        }
         return baseShippingCost;
     }
 
@@ -231,19 +310,19 @@ public class PaymentRouterController {
      * Helper class to hold item details from Catalogue Service
      */
     private static class ItemDetails {
-        private final String itemId;
+        private final int itemId;
         private final int itemCost;
         private final int baseShippingCost;
         private final int estimatedShippingDays;
 
-        public ItemDetails(String itemId, int itemCost, int baseShippingCost, int estimatedShippingDays) {
+        public ItemDetails(int itemId, int itemCost, int baseShippingCost, int estimatedShippingDays) {
             this.itemId = itemId;
             this.itemCost = itemCost;
             this.baseShippingCost = baseShippingCost;
             this.estimatedShippingDays = estimatedShippingDays;
         }
 
-        public String getItemId() { return itemId; }
+        public int getItemId() { return itemId; }
         public int getItemCost() { return itemCost; }
         public int getBaseShippingCost() { return baseShippingCost; }
         public int getEstimatedShippingDays() { return estimatedShippingDays; }
