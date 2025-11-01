@@ -18,17 +18,70 @@ public class PaymentRequestDTO {
     @NotBlank(message = "User ID is required")
     @Schema(description = "User ID", example = "user-123")
     @JsonProperty("user_id")
-    private String userId;
+    private Integer userId;
 
     @NotBlank(message = "Item ID is required")
     @Schema(description = "Item ID from catalogue", example = "item-456")
     @JsonProperty("item_id")
-    private String itemId;
+    private Integer itemId;
+
+    @NotNull(message = "Item cost is required")
+    @Min(value = 0, message = "Item cost must be >= 0")
+    @Schema(description = "Item cost in whole dollars", example = "100")
+    @JsonProperty("item_cost")
+    private Integer itemCost;
+
+    @NotNull(message = "Shipping cost is required")
+    @Min(value = 0, message = "Shipping cost must be >= 0")
+    @Schema(description = "Base shipping cost in whole dollars (server applies surcharge for EXPEDITED)", example = "15")
+    @JsonProperty("shipping_cost")
+    private Integer shippingCost;
+
+    @NotNull(message = "Estimated shipping days is required")
+    @Min(value = 0, message = "Estimated days must be >= 0")
+    @Schema(description = "Estimated delivery days", example = "3")
+    @JsonProperty("estimated_days")
+    private Integer estimatedDays;
 
     @NotNull(message = "Shipping type is required")
     @Schema(description = "Shipping type: REGULAR or EXPEDITED", example = "REGULAR")
     @JsonProperty("shipping_type")
     private ShippingTypeDTO shippingType;
+
+    @NotBlank(message = "First name is required")
+    @Schema(description = "Customer first name", example = "John")
+    @JsonProperty("first_name")
+    private String firstName;
+
+    @NotBlank(message = "Last name is required")
+    @Schema(description = "Customer last name", example = "Doe")
+    @JsonProperty("last_name")
+    private String lastName;
+
+    @NotBlank(message = "Street is required")
+    @Schema(description = "Street name", example = "Main Street")
+    @JsonProperty("street")
+    private String street;
+
+    @NotBlank(message = "Province is required")
+    @Schema(description = "Province", example = "Ontario")
+    @JsonProperty("province")
+    private String province;
+
+    @NotBlank(message = "Country is required")
+    @Schema(description = "Country", example = "Canada")
+    @JsonProperty("country")
+    private String country;
+
+    @NotBlank(message = "Postal code is required")
+    @Schema(description = "Postal code", example = "M5H 2N2")
+    @JsonProperty("postal_code")
+    private String postalCode;
+
+    @NotBlank(message = "Street number is required")
+    @Schema(description = "Street number (string in proto)", example = "123")
+    @JsonProperty("number")
+    private String number;
 
     @NotNull(message = "Credit card information is required")
     @Schema(description = "Credit card information")

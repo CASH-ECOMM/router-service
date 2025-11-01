@@ -2,15 +2,39 @@ package com.cash.mappers;
 
 import com.cash.dtos.PaymentRequestDTO;
 import com.cash.dtos.PaymentResponseDTO;
+import com.cash.dtos.TotalCostDTO;
+import com.cash.grpc.userservice.Address;
+import com.cash.grpc.userservice.GetUserResponse;
 import com.ecommerce.payment.grpc.*;
 public final class PaymentServiceDtoMapper {
 
     private PaymentServiceDtoMapper() {}
 
+    private static final String DEFAULT_PROVINCE = "Ontario";
+
+    public static UserInfo toProtoUser(GetUserResponse user) { // CHANGED
+        if (!user.getSuccess()) {
+            throw new IllegalArgumentException("User lookup failed: " + user.getMessage());
+        }
+        Address a = user.getShippingAddress();
+        if (a == null) {
+            throw new IllegalArgumentException("User has no shipping address");
+        }
+        return UserInfo.newBuilder()
+                .setFirstName(user.getFirstName())
+                .setLastName(user.getLastName())
+                .setStreet(a.getStreetName())
+                .setNumber(a.getStreetNumber())       // proto expects STRING
+                .setProvince(DEFAULT_PROVINCE)        // use global default
+                .setCountry(a.getCountry())
+                .setPostalCode(a.getPostalCode())
+                .setUserId(user.getUserId())
+                .build();
+    }
     // Build a proto PaymentRequest from: UI DTO + aggregated data
     public static PaymentRequest toProto(PaymentRequestDTO dto,
-                                         UserInfo userInfo,
-                                         String itemId,
+                                         GetUserResponse user,
+                                         int itemId,
                                          int itemCostWholeDollars,
                                          int shippingCostWholeDollars,
                                          int estimatedDays) {
@@ -28,13 +52,23 @@ public final class PaymentServiceDtoMapper {
                 .setShippingCost(shippingCostWholeDollars)     // int32, whole dollars
                 .setEstimatedDays(estimatedDays)
                 .build();
-
+        UserInfo userInfo = toProtoUser(user);
         return PaymentRequest.newBuilder()
                 .setUserInfo(userInfo)
                 .setItemId(itemId)
                 .setItemCost(itemCostWholeDollars)              // int32, whole dollars
                 .setShippingInfo(ship)
                 .setCreditCardInfo(cc)
+                .build();
+    }
+    // proto → TotalCostDTO
+    public static TotalCostDTO fromProto(TotalCostResponse t) {
+        return TotalCostDTO.builder()
+                .itemCost(t.getItemCost())
+                .hstRate(t.getHstRate())
+                .hstAmount(t.getHstAmount())
+                .totalCost(t.getTotalCost())
+                .message(t.getMessage())
                 .build();
     }
 
