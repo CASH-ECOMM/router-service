@@ -14,8 +14,6 @@ public class AuctionServiceDtoMapper {
     public static StartAuctionRequest toProto(StartAuctionRequestDto dto) {
         return StartAuctionRequest.newBuilder()
             .setCatalogueId(dto.getCatalogueId())
-            .setStartingAmount(dto.getStartingAmount())
-            .setEndTime(Timestamps.fromMillis(dto.getEndTime().toEpochMilli()))
             .build();
     }
 

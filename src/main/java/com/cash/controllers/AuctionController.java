@@ -16,6 +16,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.Instant;
+import com.google.protobuf.Timestamp;
 
 @RestController
 @RequestMapping("/api/auctions")
@@ -43,14 +47,24 @@ public class AuctionController {
             StartAuctionRequest auctionRequest = AuctionServiceDtoMapper.toProto(dto);
 
             // Gets the item from the catalogue service
-            //ItemResponse item = catalogueService.getItem(auctionRequest.getCatalogueId());
+            ItemResponse item = catalogueService.getItem(auctionRequest.getCatalogueId());
+
+            String endTime = item.getEndTime();
+
+            // assume it's UTC
+            Instant instant = LocalDateTime.parse(endTime).toInstant(ZoneOffset.UTC);
+
+            Timestamp protoTimestamp = Timestamp.newBuilder()
+                    .setSeconds(instant.getEpochSecond())
+                    .setNanos(instant.getNano())
+                    .build();
 
             StartAuctionResponse response = auctionService.startAuction(
                     authUser,
                     auctionRequest.getCatalogueId(),
-                    auctionRequest.getStartingAmount(),
-                    auctionRequest.getEndTime()
-                    //item.getEndTime()     // This gets the end time for the item from the catalogue service (Needs to be converted from String to Timestamp)
+                    item.getStartingPrice(),
+                    //auctionRequest.getEndTime()
+                    protoTimestamp    // Converted end time from string to protobuf Timestamp
             );
 
             if (response.getSuccess()) {
