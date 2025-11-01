@@ -16,12 +16,14 @@ import lombok.NoArgsConstructor;
 public class PaymentRequestDTO {
 
     @NotBlank(message = "User ID is required")
-    @Schema(description = "User ID", example = "user-123")
+    @Positive(message = "User ID must be positive")
+    @Schema(description = "User ID", example = "101")
     @JsonProperty("user_id")
     private Integer userId;
 
     @NotBlank(message = "Item ID is required")
-    @Schema(description = "Item ID from catalogue", example = "item-456")
+    @Positive(message = "Item ID must be positive")
+    @Schema(description = "Item ID from catalogue", example = "1001")
     @JsonProperty("item_id")
     private Integer itemId;
 
