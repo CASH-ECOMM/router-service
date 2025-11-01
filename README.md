@@ -11,7 +11,35 @@ REST API gateway service that provides HTTP endpoints and connects to  via gRPC.
 - Docker & Docker Compose (for containerized deployment)
 - Downstream services running, configured in `application.yaml`
 
-### 2. Running with Maven
+### 2. Development Scenarios
+
+#### Scenario 1: Router local + all services in Docker
+Make sure to have up-to-date repo of each service then run the following for each individual service:
+```bash
+docker compose up
+```
+In IntelliJ run configurations add `SPRING_PROFILES_ACTIVE=local` environment variable **OR** run the app with:
+```bash
+./mvnw spring-boot:run -Dspring.profiles.active=local
+```
+Router connects to `localhost:50051`, `localhost:50052`, `localhost:50053`, `localhost:50054`
+
+#### Scenario B: Router local + mixed local/Docker services
+Run whichever service you want to be in Docker with:
+```bash
+docker compose up
+```
+Then in your .env file, change the urls of the service running locally and run 
+```bash
+source .env.local
+```
+
+In IntelliJ run configurations add `SPRING_PROFILES_ACTIVE=local` environment variable **OR** run the app with:
+```bash
+./mvnw spring-boot:run -Dspring.profiles.active=local
+```
+
+### 3. Running with Maven
 
 **Build the application:**
 ```bash
