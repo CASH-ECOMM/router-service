@@ -120,12 +120,10 @@ public class AuctionController {
             GetAuctionEndResponse response = auctionService.getAuctionEnd(catalogueId);
 
             if (response.getFound()) {
-                return ResponseEntity.ok(Map.of(
-                        "endTime", response.getEndTime(),
-                        "message", response.getMessage()));
+                EndTimeResponseDto dto = AuctionServiceDtoMapper.fromProto(response);
+                return ResponseEntity.ok(dto);
             } else {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("message", response.getMessage()));
+                return ResponseEntity.notFound().build();
             }
         } catch (StatusRuntimeException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

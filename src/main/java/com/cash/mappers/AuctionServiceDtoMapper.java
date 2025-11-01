@@ -4,6 +4,7 @@ import com.cash.dtos.*;
 import com.cash.grpc.auctionservice.*;
 import com.cash.grpc.catalogue.ItemResponse;
 import com.google.protobuf.util.Timestamps;
+import java.time.Instant;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -23,5 +24,11 @@ public class AuctionServiceDtoMapper {
             .setCatalogueId(dto.getCatalogueId())
             .setAmount(dto.getBidAmount())
             .build();
+    }
+
+    public static EndTimeResponseDto fromProto(GetAuctionEndResponse response) {
+        return EndTimeResponseDto.builder()
+                .endTime(Instant.ofEpochSecond(response.getEndTime().getSeconds(), response.getEndTime().getNanos()))
+                .build();
     }
 }
