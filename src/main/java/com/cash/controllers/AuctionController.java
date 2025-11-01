@@ -80,7 +80,7 @@ public class AuctionController {
             }
             PlaceBidRequest bidRequest = AuctionServiceDtoMapper.toProto(dto);
 
-            if (currentItemBid != null && currentItemBid.equals(bidRequest.getCatalogueId())) {
+            if (currentItemBid != null && !currentItemBid.equals(bidRequest.getCatalogueId())) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of("error", "You can only bid on one auction item at a time. Please finish bidding on your current item before placing a bid on another."));
             }
@@ -123,7 +123,8 @@ public class AuctionController {
                 EndTimeResponseDto dto = AuctionServiceDtoMapper.fromProto(response);
                 return ResponseEntity.ok(dto);
             } else {
-                return ResponseEntity.notFound().build();
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", response.getMessage()));
             }
         } catch (StatusRuntimeException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
