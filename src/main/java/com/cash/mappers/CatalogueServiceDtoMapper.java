@@ -18,7 +18,7 @@ public class CatalogueServiceDtoMapper {
         return CreateItemRequest.newBuilder()
                 .setTitle(dto.getTitle())
                 .setDescription(dto.getDescription())
-                .setStartingPrice(dto.getStartingPrice())
+                .setStartingPrice((int)dto.getStartingPrice())
                 .setDurationHours(dto.getDurationHours())
                 .setSellerId(dto.getSellerId())
                 .build();
