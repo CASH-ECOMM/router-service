@@ -10,5 +10,4 @@ public class CatalogueItemRequestDto {
     private String description;
     private int startingPrice;
     private int durationHours;
-    private int sellerId;
 }
