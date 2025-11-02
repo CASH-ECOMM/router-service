@@ -9,6 +9,7 @@ public class LogoutRequestDto {
   @NotBlank(message = "JWT token is required")
   private String jwt;
 
+  @NotNull(message = "User ID is required")
   @Positive(message = "User ID must be positive")
-  private int userId;
+  private Integer userId;
 }
