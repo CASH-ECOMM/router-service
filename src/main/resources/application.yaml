@@ -1,5 +1,17 @@
+# gRPC client configuration
+# Uses Docker service names when running in containers
+# For local development, override via application-local.yaml or environment variables
 grpc:
   client:
     user-service:
-      address: 'static://localhost:50051'
+      address: 'static://user-service:50051'
+      negotiationType: plaintext
+    catalogue-service:
+      address: 'static://catalogue-service:50051'
+      negotiationType: plaintext
+    auction-service:
+      address: 'static://auction-service:50051'
+      negotiationType: plaintext
+    payment-service:
+      address: 'static://payment-service:50051'
       negotiationType: plaintext
