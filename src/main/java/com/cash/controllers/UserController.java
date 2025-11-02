@@ -9,6 +9,7 @@ import com.cash.grpc.userservice.*;
 import io.grpc.StatusRuntimeException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,7 +29,7 @@ public class UserController {
     }
 
     @PostMapping("/signin")
-    public ResponseEntity<?> signIn(@RequestBody SignInRequestDto dto, HttpSession session) {
+    public ResponseEntity<?> signIn(@Valid @RequestBody SignInRequestDto dto, HttpSession session) {
         try {
             SignInRequest request = UserServiceDtoMapper.toProto(dto);
             SignInResponse response = userService.signIn(
@@ -52,7 +53,7 @@ public class UserController {
     }
 
     @PostMapping("/signup")
-    public ResponseEntity<?> signUp(@RequestBody SignUpRequestDto dto) {
+    public ResponseEntity<?> signUp(@Valid @RequestBody SignUpRequestDto dto) {
         try {
             SignUpRequest request = UserServiceDtoMapper.toProto(dto);
             SignUpResponse response = userService.signUp(
@@ -130,7 +131,7 @@ public class UserController {
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequestDto dto) {
+    public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequestDto dto) {
         try {
             ResetPasswordRequest request = UserServiceDtoMapper.toProto(dto);
             ResetPasswordResponse response = userService.forgotPassword(
@@ -150,7 +151,7 @@ public class UserController {
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequestDto dto) {
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequestDto dto) {
         try {
             ConfirmPasswordResetRequest request = UserServiceDtoMapper.toProto(dto);
             ConfirmPasswordResetResponse response = userService.resetPassword(
@@ -170,7 +171,7 @@ public class UserController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(@RequestBody LogoutRequestDto dto, HttpServletRequest request,
+    public ResponseEntity<?> logout(@Valid @RequestBody LogoutRequestDto dto, HttpServletRequest request,
             HttpSession session) {
         try {
             Integer authenticatedUserId = AuthenticatedUser.getUserId(request);
