@@ -61,6 +61,26 @@ public final class PaymentServiceDtoMapper {
                 .setCreditCardInfo(cc)
                 .build();
     }
+    public static PaymentRequest toProtoQuote(
+            int itemId,
+            int itemCostWholeDollars,
+            int shippingCostWholeDollars,
+            int estimatedDays,
+            PaymentRequestDTO.ShippingTypeDTO type
+    ) {
+        ShippingInfo ship = ShippingInfo.newBuilder()
+                .setShippingType(type == PaymentRequestDTO.ShippingTypeDTO.EXPEDITED
+                        ? ShippingType.EXPEDITED : ShippingType.REGULAR)
+                .setShippingCost(shippingCostWholeDollars)
+                .setEstimatedDays(estimatedDays)
+                .build();
+
+        return PaymentRequest.newBuilder()
+                .setItemId(itemId)
+                .setItemCost(itemCostWholeDollars)
+                .setShippingInfo(ship)
+                .build();
+    }
     // proto → TotalCostDTO
     public static TotalCostDTO fromProto(TotalCostResponse t) {
         return TotalCostDTO.builder()
