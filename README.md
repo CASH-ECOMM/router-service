@@ -20,7 +20,7 @@ docker compose up
 ```
 In IntelliJ run configurations add `SPRING_PROFILES_ACTIVE=local` environment variable **OR** run the app with:
 ```bash
-./mvnw spring-boot:run -Dspring.profiles.active=local
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 ```
 Router connects to `localhost:50051`, `localhost:50052`, `localhost:50053`, `localhost:50054`
 
@@ -36,7 +36,7 @@ source .env.local
 
 In IntelliJ run configurations add `SPRING_PROFILES_ACTIVE=local` environment variable **OR** run the app with:
 ```bash
-./mvnw spring-boot:run -Dspring.profiles.active=local
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
 ### 3. Running with Maven
