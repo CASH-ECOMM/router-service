@@ -16,15 +16,15 @@ public class BiddingSessionManager {
   /**
    * Remember which item the current session is bidding on.
    */
-  public void setItem(HttpSession session, Long itemId) {
+  public void setItem(HttpSession session, Integer itemId) {
     session.setAttribute(ITEM_ID_ATTR, itemId);
   }
 
   /**
    * Retrieve the item tied to this session (if any).
    */
-  public Long getItem(HttpSession session) {
-    return (Long) session.getAttribute(ITEM_ID_ATTR);
+  public Integer getItem(HttpSession session) {
+    return (Integer) session.getAttribute(ITEM_ID_ATTR);
   }
 
   /**

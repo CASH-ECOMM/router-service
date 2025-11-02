@@ -27,6 +27,6 @@ public class CatalogueService {
             .setId(id)
             .build();
      return blockingStub.getItem(request);
-}
+    }
 
 }
