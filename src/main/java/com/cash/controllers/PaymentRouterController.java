@@ -7,6 +7,7 @@ import com.cash.dtos.PaymentResponseDTO;
 import com.cash.mappers.PaymentServiceDtoMapper;
 import com.cash.services.PaymentService;
 import com.cash.services.CatalogueService;
+import com.cash.services.UserService;
 import com.cash.grpc.catalogue.ItemResponse;
 
 import io.grpc.ManagedChannel;
@@ -43,6 +44,7 @@ public class PaymentRouterController {
 
     private final PaymentService paymentClient;
     private final CatalogueService catalogueService;
+    private final UserService userService;
     /**
      * Use Case 5: Process Payment
      * Receives payment request from UI, aggregates data from other services,
@@ -75,8 +77,16 @@ public class PaymentRouterController {
                 request.getUserId(), request.getItemId());
 
         try {
-            // Get user information from User Service (mock for now)
-            GetUserResponse user = getUserFromUserService(request.getUserId());
+            // Get user information from User Service
+            GetUserResponse user = userService.getUser(request.getUserId());
+            if (!user.getSuccess()) {
+                log.warn("User lookup failed for user {}", request.getUserId());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(PaymentResponseDTO.builder()
+                                .success(false)
+                                .message("User lookup failed: " + user.getMessage())
+                                .build());
+            }
 
             // Get item details from Catalogue Service (mock for now)
             ItemDetails itemDetails = getItemDetailsFromCatalogueService(request.getItemId());
@@ -89,7 +99,7 @@ public class PaymentRouterController {
                     user,
                     itemDetails.getItemId(),
                     itemDetails.getItemCost(),               // int (whole dollars)
-                    shippingCost,                     // int (whole dollars)
+                    shippingCost,                            // int (whole dollars)
                     itemDetails.getEstimatedShippingDays()
             );
 
@@ -141,8 +151,14 @@ public class PaymentRouterController {
         log.info("Calculating total cost for user: {} and item: {}", request.getUserId(), request.getItemId());
 
         try {
-            // Same aggregation: get user & item (mocked here; replace with real gRPC calls)
-            GetUserResponse user = getUserFromUserService(request.getUserId());
+            // Fetch user info via UserService
+            GetUserResponse user = userService.getUser(request.getUserId());
+            if (!user.getSuccess()) {
+                log.warn("User lookup failed for user {}", request.getUserId());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "User lookup failed: " + user.getMessage()));
+            }
+
             ItemDetails itemDetails = getItemDetailsFromCatalogueService(request.getItemId());
 
             int shippingCost = calculateShippingCost(request.getShippingType(), itemDetails.getBaseShippingCost());
@@ -256,37 +272,40 @@ public class PaymentRouterController {
      * Mock: Get user information from User Service
      * In production, this would call the actual User Service via gRPC
      */
-    private GetUserResponse getUserFromUserService(int userId) {
-        log.debug("Fetching user info for user ID: {}", userId);
-
-        Address shipping = Address.newBuilder()
-                .setStreetName("Main Street")
-                .setStreetNumber("123")
-                .setCity("Toronto")
-                .setCountry("Canada")
-                .setPostalCode("M5H 2N2")
-                .build();
-
-        return GetUserResponse.newBuilder()
-                .setSuccess(true)
-                .setUserId(userId)
-                .setUsername("john.doe")
-                .setFirstName("John")
-                .setLastName("Doe")
-                .setEmail("john.doe@example.com")
-                .setShippingAddress(shipping)
-                .setMessage("mock")
-                .build();
-    }
+//    private GetUserResponse getUserFromUserService(int userId) {
+//        log.debug("Fetching user info for user ID: {}", userId);
+//
+//        Address shipping = Address.newBuilder()
+//                .setStreetName("Main Street")
+//                .setStreetNumber("123")
+//                .setCity("Toronto")
+//                .setCountry("Canada")
+//                .setPostalCode("M5H 2N2")
+//                .build();
+//
+//        return GetUserResponse.newBuilder()
+//                .setSuccess(true)
+//                .setUserId(userId)
+//                .setUsername("john.doe")
+//                .setFirstName("John")
+//                .setLastName("Doe")
+//                .setEmail("john.doe@example.com")
+//                .setShippingAddress(shipping)
+//                .setMessage("mock")
+//                .build();
+//    }
 
     /**
-     * Mock: Get item details from Catalogue Service
+     * Get item details from Catalogue Service
      * In production, this would call the actual Catalogue Service via gRPC
      */
     private ItemDetails getItemDetailsFromCatalogueService(int itemId) {
         log.debug("Fetching item details for item ID: {}", itemId);
 
         ItemResponse ir = catalogueService.getItem(itemId);
+        if (ir.getId() == 0) {
+            throw new IllegalArgumentException("Catalogue item " + itemId + " not found");
+        }
 
 
         int itemCost = ir.getCurrentPrice() != 0 ? ir.getCurrentPrice()
