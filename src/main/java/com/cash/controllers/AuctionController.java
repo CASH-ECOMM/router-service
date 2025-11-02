@@ -98,11 +98,6 @@ public class AuctionController {
             }
             PlaceBidRequest bidRequest = AuctionServiceDtoMapper.toProto(dto);
 
-            if (currentItemBid != null && !currentItemBid.equals(catalogueId)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("error", "You can only bid on one auction item at a time. Please finish bidding on your current item before placing a bid on another."));
-            }
-
             ItemResponse item;
 
             try {
@@ -111,6 +106,11 @@ public class AuctionController {
             } catch (StatusRuntimeException e) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("error", "Item not found in catalogue."));
+            }
+
+            if (currentItemBid != null && !currentItemBid.equals(catalogueId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "You can only bid on one auction item at a time. Please finish bidding on your current item before placing a bid on another."));
             }
 
             // Checks if the authenticated user is the seller of the item
