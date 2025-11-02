@@ -35,8 +35,8 @@ public class AuctionController {
         this.catalogueService = catalogueService;
     }
 
-    @PostMapping("/startauction")
-    public ResponseEntity<?> startAuction(@RequestBody StartAuctionRequestDto dto, HttpServletRequest request) {
+    @PostMapping("/{catalogueId}/startauction")
+    public ResponseEntity<?> startAuction(@PathVariable int catalogueId, HttpServletRequest request) {
         try {
             Integer authUser = AuthenticatedUser.getUserId(request);
             if (authUser == null) {
@@ -44,13 +44,11 @@ public class AuctionController {
                         .body(Map.of("message", "You need to be logged in to start an auction."));
             }
 
-            StartAuctionRequest auctionRequest = AuctionServiceDtoMapper.toProto(dto);
-
             ItemResponse item;
 
             try {
                 // Gets the item from the catalogue service
-                item = catalogueService.getItem(auctionRequest.getCatalogueId());
+                item = catalogueService.getItem(catalogueId);
             } catch (StatusRuntimeException e) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("error", "Item not found in catalogue."));
@@ -68,7 +66,7 @@ public class AuctionController {
 
             StartAuctionResponse response = auctionService.startAuction(
                     authUser,
-                    auctionRequest.getCatalogueId(),
+                    catalogueId,
                     item.getStartingPrice(),
                     protoTimestamp    // Converted end time from string to protobuf Timestamp
             );
@@ -87,8 +85,8 @@ public class AuctionController {
         }
     }
 
-    @PostMapping("/placebid")
-    public ResponseEntity<?> placeBid(@RequestBody PlaceBidRequestDto dto, HttpServletRequest request, HttpSession session) {
+    @PostMapping("/{catalogueId}/placebid")
+    public ResponseEntity<?> placeBid(@PathVariable int catalogueId, @RequestBody PlaceBidRequestDto dto, HttpServletRequest request, HttpSession session) {
         try {
             Integer authUser = AuthenticatedUser.getUserId(request);
             String authUsername = AuthenticatedUser.getUsername(request);
@@ -100,7 +98,7 @@ public class AuctionController {
             }
             PlaceBidRequest bidRequest = AuctionServiceDtoMapper.toProto(dto);
 
-            if (currentItemBid != null && !currentItemBid.equals(bidRequest.getCatalogueId())) {
+            if (currentItemBid != null && !currentItemBid.equals(catalogueId)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of("error", "You can only bid on one auction item at a time. Please finish bidding on your current item before placing a bid on another."));
             }
@@ -109,7 +107,7 @@ public class AuctionController {
 
             try {
                 // Gets the item from the catalogue service
-                item = catalogueService.getItem(bidRequest.getCatalogueId());
+                item = catalogueService.getItem(catalogueId);
             } catch (StatusRuntimeException e) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("error", "Item not found in catalogue."));
@@ -124,7 +122,7 @@ public class AuctionController {
             PlaceBidResponse response = auctionService.placeBid(
                     authUser,
                     authUsername,
-                    bidRequest.getCatalogueId(),
+                    catalogueId,
                     bidRequest.getAmount()
             );
 
@@ -142,7 +140,7 @@ public class AuctionController {
         }
     }
 
-    @GetMapping("/auctionend/{catalogueId}")
+    @GetMapping("/{catalogueId}/auctionend")
     public ResponseEntity<?> getAuctionEnd(@PathVariable int catalogueId) {
         try {
             GetAuctionEndResponse response = auctionService.getAuctionEnd(catalogueId);
@@ -160,7 +158,7 @@ public class AuctionController {
         }
     }
 
-    @GetMapping("/auctionstatus/{catalogueId}")
+    @GetMapping("/{catalogueId}/auctionstatus")
     public ResponseEntity<?> getAuctionStatus(@PathVariable int catalogueId) {
         try {
             GetAuctionStatusResponse response = auctionService.getAuctionStatus(catalogueId);
@@ -181,7 +179,7 @@ public class AuctionController {
         }
     }
 
-    @GetMapping("/auctionwinner/{catalogueId}")
+    @GetMapping("/{catalogueId}/auctionwinner")
     public ResponseEntity<?> getAuctionWinner(@PathVariable int catalogueId) {
         try {
             GetAuctionWinnerResponse response = auctionService.getAuctionWinner(catalogueId);
