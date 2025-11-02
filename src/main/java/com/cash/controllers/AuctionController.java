@@ -191,8 +191,8 @@ public class AuctionController {
                         "auctionStatus", response.getMessage()));
             } else {
                 // Auction winner not found - auction not ended yet or no bids
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("message", response.getMessage()));
+                return ResponseEntity.ok(
+                        Map.of("message", response.getMessage()));
             }
         } catch (StatusRuntimeException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
