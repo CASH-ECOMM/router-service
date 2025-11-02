@@ -165,10 +165,10 @@ public class AuctionController {
 
             if (response.getSuccess()) {
                 return ResponseEntity.ok(Map.of(
-                        "highest bidder", response.getHighestBidder(),
-                        "current highest bid", response.getCurrentAmount(),
-                        "remaining time", response.getRemainingTime(),
-                        "auction status", response.getMessage()));
+                        "highestBidder", response.getHighestBidder(),
+                        "currentHighestBid", response.getCurrentAmount(),
+                        "remainingTime", response.getRemainingTime(),
+                        "auctionStatus", response.getMessage()));
             } else {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("message", response.getMessage()));
@@ -186,9 +186,9 @@ public class AuctionController {
 
             if (response.getFound()) {
                 return ResponseEntity.ok(Map.of(
-                        "winning user", response.getWinnerUserId(),
-                        "final price", response.getFinalPrice(),
-                        "auction status", response.getMessage()));
+                        "winningUser", response.getWinnerUserId(),
+                        "finalPrice", response.getFinalPrice(),
+                        "auctionStatus", response.getMessage()));
             } else {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("message", response.getMessage()));
