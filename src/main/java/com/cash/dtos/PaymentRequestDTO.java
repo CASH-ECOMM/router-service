@@ -15,13 +15,13 @@ import lombok.NoArgsConstructor;
 @Schema(description = "Payment request from UI")
 public class PaymentRequestDTO {
 
-    @NotBlank(message = "User ID is required")
+    @NotNull(message = "User ID is required")
     @Positive(message = "User ID must be positive")
     @Schema(description = "User ID", example = "101")
     @JsonProperty("user_id")
     private Integer userId;
 
-    @NotBlank(message = "Item ID is required")
+    @NotNull(message = "Item ID is required")
     @Positive(message = "Item ID must be positive")
     @Schema(description = "Item ID from catalogue", example = "1001")
     @JsonProperty("item_id")
@@ -50,37 +50,30 @@ public class PaymentRequestDTO {
     @JsonProperty("shipping_type")
     private ShippingTypeDTO shippingType;
 
-    @NotBlank(message = "First name is required")
     @Schema(description = "Customer first name", example = "John")
     @JsonProperty("first_name")
     private String firstName;
 
-    @NotBlank(message = "Last name is required")
     @Schema(description = "Customer last name", example = "Doe")
     @JsonProperty("last_name")
     private String lastName;
 
-    @NotBlank(message = "Street is required")
     @Schema(description = "Street name", example = "Main Street")
     @JsonProperty("street")
     private String street;
 
-    @NotBlank(message = "Province is required")
     @Schema(description = "Province", example = "Ontario")
     @JsonProperty("province")
     private String province;
 
-    @NotBlank(message = "Country is required")
     @Schema(description = "Country", example = "Canada")
     @JsonProperty("country")
     private String country;
 
-    @NotBlank(message = "Postal code is required")
     @Schema(description = "Postal code", example = "M5H 2N2")
     @JsonProperty("postal_code")
     private String postalCode;
 
-    @NotBlank(message = "Street number is required")
     @Schema(description = "Street number (string in proto)", example = "123")
     @JsonProperty("number")
     private String number;
