@@ -39,6 +39,8 @@ public class CatalogueServiceDtoMapper {
                 .remainingTimeSeconds(response.getRemainingTimeSeconds())
                 .shippingCost(response.getShippingCost())
                 .shippingTime(response.getShippingTime())
+                .message("Item created successfully") 
+                .success(true) 
                 .build();
     }
 
