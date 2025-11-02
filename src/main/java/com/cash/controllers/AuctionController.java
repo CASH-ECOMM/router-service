@@ -190,7 +190,8 @@ public class AuctionController {
                         "finalPrice", response.getFinalPrice(),
                         "auctionStatus", response.getMessage()));
             } else {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                // Auction winner not found - auction not ended yet or no bids
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("message", response.getMessage()));
             }
         } catch (StatusRuntimeException e) {
