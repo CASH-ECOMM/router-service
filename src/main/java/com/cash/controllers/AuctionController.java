@@ -35,7 +35,7 @@ public class AuctionController {
         this.catalogueService = catalogueService;
     }
 
-    @PostMapping("/{catalogueId}/startauction")
+    @PostMapping("/{catalogueId}/start")
     public ResponseEntity<?> startAuction(@PathVariable int catalogueId, HttpServletRequest request) {
         try {
             Integer authUser = AuthenticatedUser.getUserId(request);
@@ -85,7 +85,7 @@ public class AuctionController {
         }
     }
 
-    @PostMapping("/{catalogueId}/placebid")
+    @PostMapping("/{catalogueId}/bid")
     public ResponseEntity<?> placeBid(@PathVariable int catalogueId, @RequestBody PlaceBidRequestDto dto, HttpServletRequest request, HttpSession session) {
         try {
             Integer authUser = AuthenticatedUser.getUserId(request);
@@ -140,7 +140,7 @@ public class AuctionController {
         }
     }
 
-    @GetMapping("/{catalogueId}/auctionend")
+    @GetMapping("/{catalogueId}/end")
     public ResponseEntity<?> getAuctionEnd(@PathVariable int catalogueId) {
         try {
             GetAuctionEndResponse response = auctionService.getAuctionEnd(catalogueId);
@@ -158,7 +158,7 @@ public class AuctionController {
         }
     }
 
-    @GetMapping("/{catalogueId}/auctionstatus")
+    @GetMapping("/{catalogueId}/status")
     public ResponseEntity<?> getAuctionStatus(@PathVariable int catalogueId) {
         try {
             GetAuctionStatusResponse response = auctionService.getAuctionStatus(catalogueId);
@@ -179,7 +179,7 @@ public class AuctionController {
         }
     }
 
-    @GetMapping("/{catalogueId}/auctionwinner")
+    @GetMapping("/{catalogueId}/winner")
     public ResponseEntity<?> getAuctionWinner(@PathVariable int catalogueId) {
         try {
             GetAuctionWinnerResponse response = auctionService.getAuctionWinner(catalogueId);
