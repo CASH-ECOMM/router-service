@@ -37,7 +37,6 @@ public class UserController {
 
             if (response.getSuccess()) {
                 biddingSessionManager.clear(session);
-                session.setAttribute("userId", response.getUserId());
                 return ResponseEntity.ok(Map.of(
                         "jwt", response.getJwt(),
                         "userId", response.getUserId(),
