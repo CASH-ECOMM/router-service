@@ -54,6 +54,11 @@ public class AuctionController {
                         .body(Map.of("error", "Item not found in catalogue."));
             }
 
+            if (authUser != item.getSellerId()) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("message", "You can only start an auction for your own items."));
+            }
+
             String endTime = item.getEndTime();
 
             // assume it's UTC
