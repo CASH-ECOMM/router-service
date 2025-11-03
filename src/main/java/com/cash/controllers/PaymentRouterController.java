@@ -73,18 +73,36 @@ public class PaymentRouterController {
 
         log.info("Received payment request for user: {} and item: {}",
                 request.getUserId(), request.getItemId());
+        if (request.getUserId() <= 0) {
+            return ResponseEntity.badRequest().body(
+                    PaymentResponseDTO.builder().success(false).message("Invalid userId").build()
+            );
+        }
+        if (request.getItemId() <= 0) {
+            return ResponseEntity.badRequest().body(
+                    PaymentResponseDTO.builder().success(false).message("Invalid itemId").build()
+            );
+        }
 
         try {
             // Get user information from User Service
             GetUserResponse user = userService.getUser(request.getUserId());
-            if (!user.getSuccess()) {
-                log.warn("User lookup failed for user {}", request.getUserId());
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(PaymentResponseDTO.builder()
-                                .success(false)
-                                .message("User lookup failed: " + user.getMessage())
-                                .build());
-            }
+//            if (!user.getSuccess()) {
+//                log.warn("User lookup failed for user {}", request.getUserId());
+//                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+//                        .body(PaymentResponseDTO.builder()
+//                                .success(false)
+//                                .message("User lookup failed: " + user.getMessage())
+//                                .build());
+//            }
+//            if (user.getShippingAddress() == null) {
+//                // Avoid letting mapper throw and turning this into a 500
+//                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+//                        .body(PaymentResponseDTO.builder()
+//                                .success(false)
+//                                .message("User has no shipping address on file")
+//                                .build());
+//            }
 
             // Get item details from Catalogue Service
             ItemDetails itemDetails = getItemDetailsFromCatalogueService(request.getItemId());
@@ -109,14 +127,7 @@ public class PaymentRouterController {
                                 .message("You are not the winning bidder for this item.")
                                 .build());
             }
-
-            //auction final price >= catalogue item price
-            int baseCataloguePrice = itemDetails.getItemCost();
-            int finalAuctionPrice = Math.max(winnerResponse.getFinalPrice(), baseCataloguePrice);
-            if (finalAuctionPrice != winnerResponse.getFinalPrice()) { // CHANGED
-                log.warn("Adjusted final auction price from {} to catalogue minimum {} for item {}",
-                        winnerResponse.getFinalPrice(), baseCataloguePrice, request.getItemId());
-            }
+            int finalAuctionPrice = winnerResponse.getFinalPrice();
             // Calculate shipping cost based on type
             int shippingCost = calculateShippingCost(request.getShippingType(), itemDetails.getBaseShippingCost());
 
@@ -126,7 +137,7 @@ public class PaymentRouterController {
                     itemDetails.getItemId(),
                     finalAuctionPrice,               // int (whole dollars)
                     shippingCost,                            // int (whole dollars)
-                    itemDetails.getEstimatedShippingDays()
+                    itemDetails.estimatedShippingDays
             );
 
             // Build gRPC payment request
@@ -174,7 +185,28 @@ public class PaymentRouterController {
             @ApiResponse(responseCode = "409", description = "Auction has not ended"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public ResponseEntity<?> calculateTotalCost(@Valid @RequestBody com.cash.dtos.TotalCostRequestDTO request)  {
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            required = true,
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = com.cash.dtos.TotalCostRequestDTO.class),
+                    examples = {
+                            @io.swagger.v3.oas.annotations.media.ExampleObject(
+                                    name = "Regular shipping",
+                                    summary = "REGULAR",
+                                    description = "Choose REGULAR (no surcharge).",
+                                    value = "{\n  \"item_id\": 1001,\n  \"shipping_type\": \"REGULAR\"\n}"
+                            ),
+                            @io.swagger.v3.oas.annotations.media.ExampleObject(
+                                    name = "Expedited shipping",
+                                    summary = "EXPEDITED",
+                                    description = "Choose EXPEDITED (adds expedited surcharge).",
+                                    value = "{\n  \"item_id\": 1001,\n  \"shipping_type\": \"EXPEDITED\"\n}"
+                            )
+                    }
+            )
+    )
+    public ResponseEntity<?> calculateTotalCost(@Valid @RequestBody com.cash.dtos.TotalCostRequestDTO request){
         log.info("Calculating total cost for item: {}", request.getItemId());
 
 
@@ -186,10 +218,11 @@ public class PaymentRouterController {
                         .body(Map.of("error",
                                 "Auction has not ended yet; total cost will be available after a winner is determined."));
             }
+            //User winner
 
             ItemDetails itemDetails = getItemDetailsFromCatalogueService(request.getItemId());
-            int baseCataloguePrice = itemDetails.getItemCost();
-            int finalAuctionPrice = Math.max(winnerResponse.getFinalPrice(), baseCataloguePrice);
+//            int baseCataloguePrice = itemDetails.getItemCost();
+            int finalAuctionPrice = winnerResponse.getFinalPrice();
 //            base from catalogue; surcharge applied inside payment-service if EXPEDITED
             var shipType = request.getShippingType() == null
                     ? PaymentRequestDTO.ShippingTypeDTO.REGULAR
@@ -222,7 +255,7 @@ public class PaymentRouterController {
 //                        .body(Map.of("error", "Auction service unavailable to compute auction-based price"));
 //            }
 
-            // Build proto *without* user/credit-card (quote only)
+            // Build proto *without* credit-card (quote only)
             PaymentRequest grpcReq = PaymentServiceDtoMapper.toProtoQuote(
                     itemDetails.getItemId(),
                     finalAuctionPrice,
@@ -255,7 +288,7 @@ public class PaymentRouterController {
      */
     @GetMapping("/{paymentId}")
     @Operation(
-            summary = "Get payment by ID",
+            summary = "Get Receipt by ID",
             description = "Retrieve payment details and receipt information"
     )
     @ApiResponses(value = {
@@ -283,7 +316,6 @@ public class PaymentRouterController {
                             .message("paymentId must be an integer")
                             .build());
         }
-
 
         try {
             PaymentResponse grpcResp = paymentClient.getPaymentById(pid);

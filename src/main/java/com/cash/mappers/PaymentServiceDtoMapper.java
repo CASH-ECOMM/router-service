@@ -3,7 +3,6 @@ package com.cash.mappers;
 import com.cash.dtos.PaymentRequestDTO;
 import com.cash.dtos.PaymentResponseDTO;
 import com.cash.dtos.TotalCostDTO;
-import com.cash.grpc.userservice.Address;
 import com.cash.grpc.userservice.GetUserResponse;
 import com.ecommerce.payment.grpc.*;
 public final class PaymentServiceDtoMapper {
@@ -12,25 +11,55 @@ public final class PaymentServiceDtoMapper {
 
     private static final String DEFAULT_PROVINCE = "Ontario";
 
-    public static UserInfo toProtoUser(GetUserResponse user) { // CHANGED
+//    public static UserInfo toProtoUser(GetUserResponse user, int fallbackUserId) { // CHANGED
+//        if (!user.getSuccess()) {
+//            throw new IllegalArgumentException("User lookup failed: " + user.getMessage());
+//        }
+//        com.cash.grpc.userservice.Address a = user.getShippingAddress();
+//        if (a == null) {
+//            throw new IllegalArgumentException("User has no shipping address");
+//        }
+//        int uid = user.getUserId() > 0 ? user.getUserId() : fallbackUserId;
+//        if (uid <= 0) {
+//            throw new IllegalArgumentException("Resolved user id is invalid (both userService and request empty).");
+//        }
+//        return UserInfo.newBuilder()
+//                .setFirstName(user.getFirstName())
+//                .setLastName(user.getLastName())
+//                .setStreet(a.getStreetName())
+//                .setNumber(a.getStreetNumber())
+//                .setProvince(DEFAULT_PROVINCE)        // use global default
+//                .setCountry(a.getCountry())
+//                .setPostalCode(a.getPostalCode())
+//                .setUserId(uid)
+//                .build();
+//    }
+    private static UserInfo toPaymentUserInfo(GetUserResponse user, int fallbackUserId) {
         if (!user.getSuccess()) {
-            throw new IllegalArgumentException("User lookup failed: " + user.getMessage());
+            throw new IllegalArgumentException("User lookup failed: " + user.getMessage()); // CHANGE
         }
-        Address a = user.getShippingAddress();
-        if (a == null) {
-            throw new IllegalArgumentException("User has no shipping address");
+        if (!user.hasShippingAddress()) {
+            throw new IllegalArgumentException("User has no shipping address"); // CHANGE
         }
+
+        var addr = user.getShippingAddress();
+        int uid = user.getUserId() > 0 ? user.getUserId() : fallbackUserId;
+        if (uid <= 0) {
+            throw new IllegalArgumentException("Resolved user id is invalid."); // CHANGE
+        }
+
         return UserInfo.newBuilder()
+                .setUserId(uid)                                   // CHANGE: crucial for payment service
                 .setFirstName(user.getFirstName())
                 .setLastName(user.getLastName())
-                .setStreet(a.getStreetName())
-                .setNumber(a.getStreetNumber())       // proto expects STRING
-                .setProvince(DEFAULT_PROVINCE)        // use global default
-                .setCountry(a.getCountry())
-                .setPostalCode(a.getPostalCode())
-                .setUserId(user.getUserId())
+                .setStreet(addr.getStreetName())
+                .setNumber(addr.getStreetNumber())
+                .setProvince(addr.getCity())                      // CHANGE: map city -> province if no province field
+                .setCountry(addr.getCountry())
+                .setPostalCode(addr.getPostalCode())
                 .build();
     }
+
     // Build a proto PaymentRequest from: UI DTO + aggregated data
     public static PaymentRequest toProto(PaymentRequestDTO dto,
                                          GetUserResponse user,
@@ -38,6 +67,7 @@ public final class PaymentServiceDtoMapper {
                                          int itemCostWholeDollars,
                                          int shippingCostWholeDollars,
                                          int estimatedDays) {
+        UserInfo userInfo = toPaymentUserInfo(user, dto.getUserId());
 
         CreditCardInfo cc = CreditCardInfo.newBuilder()
                 .setCardNumber(dto.getCreditCard().getCardNumber())
@@ -52,7 +82,6 @@ public final class PaymentServiceDtoMapper {
                 .setShippingCost(shippingCostWholeDollars)     // int32, whole dollars
                 .setEstimatedDays(estimatedDays)
                 .build();
-        UserInfo userInfo = toProtoUser(user);
         return PaymentRequest.newBuilder()
                 .setUserInfo(userInfo)
                 .setItemId(itemId)

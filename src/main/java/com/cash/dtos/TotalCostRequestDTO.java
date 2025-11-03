@@ -13,11 +13,15 @@ import lombok.*;
 public class TotalCostRequestDTO {
 
     @NotNull @Positive
-    @Schema(description = "Catalogue Item ID", example = "1001")
+    @Schema(description = "Catalogue Item ID", example = "1")
     @JsonProperty("item_id")
     private Integer itemId;
 
-    @Schema(description = "Shipping type: REGULAR or EXPEDITED", example = "REGULAR")
+    @Schema(
+            description = "Choose REGULAR (no surcharge) or EXPEDITED (adds expedited surcharge).",
+            example = "REGULAR",
+            allowableValues = {"REGULAR", "EXPEDITED"}
+    )
     @JsonProperty("shipping_type")
     private com.cash.dtos.PaymentRequestDTO.ShippingTypeDTO shippingType;
 }

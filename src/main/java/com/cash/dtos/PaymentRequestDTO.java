@@ -1,5 +1,14 @@
+// Java
 package com.cash.dtos;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
@@ -11,77 +20,29 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-@Schema(description = "Payment request from UI")
 public class PaymentRequestDTO {
 
-    @NotNull(message = "User ID is required")
-    @Positive(message = "User ID must be positive")
-    @Schema(description = "User ID", example = "101")
-    @JsonProperty("user_id")
-    private Integer userId;
+    @Min(1)
+    @JsonAlias("user_id") // CHANGE
+    private int userId;
 
-    @NotNull(message = "Item ID is required")
-    @Positive(message = "Item ID must be positive")
-    @Schema(description = "Item ID from catalogue", example = "1001")
-    @JsonProperty("item_id")
-    private Integer itemId;
-
-    @NotNull(message = "Item cost is required")
-    @Min(value = 0, message = "Item cost must be >= 0")
-    @Schema(description = "Item cost in whole dollars", example = "100")
-    @JsonProperty("item_cost")
-    private Integer itemCost;
-
-    @NotNull(message = "Shipping cost is required")
-    @Min(value = 0, message = "Shipping cost must be >= 0")
-    @Schema(description = "Base shipping cost in whole dollars (server applies surcharge for EXPEDITED)", example = "15")
-    @JsonProperty("shipping_cost")
-    private Integer shippingCost;
-
-    @NotNull(message = "Estimated shipping days is required")
-    @Min(value = 0, message = "Estimated days must be >= 0")
-    @Schema(description = "Estimated delivery days", example = "3")
-    @JsonProperty("estimated_days")
-    private Integer estimatedDays;
+    @Min(1)
+    @JsonAlias("item_id") // CHANGE
+    private int itemId;
 
     @NotNull(message = "Shipping type is required")
     @Schema(description = "Shipping type: REGULAR or EXPEDITED", example = "REGULAR")
     @JsonProperty("shipping_type")
     private ShippingTypeDTO shippingType;
 
-    @Schema(description = "Customer first name", example = "John")
-    @JsonProperty("first_name")
-    private String firstName;
-
-    @Schema(description = "Customer last name", example = "Doe")
-    @JsonProperty("last_name")
-    private String lastName;
-
-    @Schema(description = "Street name", example = "Main Street")
-    @JsonProperty("street")
-    private String street;
-
-    @Schema(description = "Province", example = "Ontario")
-    @JsonProperty("province")
-    private String province;
-
-    @Schema(description = "Country", example = "Canada")
-    @JsonProperty("country")
-    private String country;
-
-    @Schema(description = "Postal code", example = "M5H 2N2")
-    @JsonProperty("postal_code")
-    private String postalCode;
-
-    @Schema(description = "Street number (string in proto)", example = "123")
-    @JsonProperty("number")
-    private String number;
-
-    @NotNull(message = "Credit card information is required")
-    @Schema(description = "Credit card information")
-    @JsonProperty("credit_card")
+    @Valid
+    @NotNull
+    @JsonAlias("credit_card") // CHANGE
     private CreditCardDTO creditCard;
+
+    public enum ShippingTypeDTO {
+        REGULAR, EXPEDITED
+    }
 
     @Data
     @NoArgsConstructor
@@ -114,10 +75,4 @@ public class PaymentRequestDTO {
         private String securityCode;
     }
 
-    public enum ShippingTypeDTO {
-        REGULAR,
-        EXPEDITED
-    }
 }
-
-
