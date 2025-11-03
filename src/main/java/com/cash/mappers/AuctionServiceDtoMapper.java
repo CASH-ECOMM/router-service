@@ -1,6 +1,7 @@
 package com.cash.mappers;
 
-import com.cash.dtos.*;
+import com.cash.dtos.EndTimeResponseDto;
+import com.cash.dtos.PlaceBidRequestDto;
 import com.cash.grpc.auctionservice.*;
 import java.time.Instant;
 

@@ -2,11 +2,8 @@ package com.cash.mappers;
 
 import com.cash.dtos.CatalogueItemRequestDto;
 import com.cash.dtos.CatalogueItemResponseDto;
-import com.cash.grpc.catalogue.CatalogueServiceGrpc;
-import com.cash.grpc.catalogue.*;
 import com.cash.grpc.catalogue.CreateItemRequest;
 import com.cash.grpc.catalogue.ItemResponse;
-import com.cash.grpc.catalogue.ItemList;
 
 
 import java.util.List;

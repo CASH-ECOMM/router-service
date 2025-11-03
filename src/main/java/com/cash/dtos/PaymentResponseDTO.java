@@ -5,14 +5,17 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import org.springframework.hateoas.RepresentationModel;
 
 @Data
+@EqualsAndHashCode(callSuper = false)
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @Schema(description = "Payment response to UI")
-public class PaymentResponseDTO {
+public class PaymentResponseDTO extends RepresentationModel<PaymentResponseDTO> {
 
     @Schema(description = "Payment success status")
     @JsonProperty("success")
@@ -82,5 +85,3 @@ public class PaymentResponseDTO {
     }
 
 }
-
-
