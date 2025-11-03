@@ -123,6 +123,18 @@ public class OpenApiConfig {
                                                                     errorResponseRef));
                                         }
 
+                                        // 409 Conflict - for conflicting state errors
+                                        if (!operation.getResponses().containsKey("409")) {
+                                            operation
+                                                    .getResponses()
+                                                    .addApiResponse(
+                                                            "409",
+                                                            createErrorResponse(
+                                                                    "Conflict",
+                                                                    "Request conflicts with current state of the resource",
+                                                                    errorResponseRef));
+                                        }
+
                                         // 500 Internal Server Error - for unexpected errors
                                         if (!operation.getResponses().containsKey("500")) {
                                             operation

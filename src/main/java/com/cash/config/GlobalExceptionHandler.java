@@ -1,6 +1,7 @@
 package com.cash.config;
 
 import com.cash.dtos.ErrorResponse;
+import com.cash.exceptions.ConflictException;
 import com.cash.exceptions.ResourceNotFoundException;
 import com.cash.exceptions.UnauthorizedException;
 import io.grpc.StatusRuntimeException;
@@ -37,6 +38,15 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleUnauthorizedException(UnauthorizedException ex) {
         ErrorResponse error = ErrorResponse.of(HttpStatus.UNAUTHORIZED.value(), ex.getMessage());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+    }
+
+    /**
+     * Handles ConflictException. Returns 409 Conflict with error message.
+     */
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ErrorResponse> handleConflictException(ConflictException ex) {
+        ErrorResponse error = ErrorResponse.of(HttpStatus.CONFLICT.value(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 
     /**
