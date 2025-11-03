@@ -20,9 +20,20 @@ public class CatalogueServiceDtoMapper {
                 .setDescription(dto.getDescription())
                 .setStartingPrice((int)dto.getStartingPrice())
                 .setDurationHours(dto.getDurationHours())
-                .setSellerId(dto.getSellerId())
                 .build();
     }
+    
+
+    public static CreateItemRequest toProto(CatalogueItemRequestDto dto, int sellerId) {
+        return CreateItemRequest.newBuilder()
+                .setTitle(dto.getTitle())
+                .setDescription(dto.getDescription())
+                .setStartingPrice((int) dto.getStartingPrice())
+                .setDurationHours(dto.getDurationHours())
+                .setSellerId(sellerId)
+                .build();
+    }
+
 
     public static CatalogueItemResponseDto fromProto(ItemResponse response) {
         return CatalogueItemResponseDto.builder()

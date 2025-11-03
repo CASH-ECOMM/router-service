@@ -4,10 +4,13 @@ import com.cash.dtos.CatalogueItemRequestDto;
 import com.cash.dtos.CatalogueItemResponseDto;
 import com.cash.mappers.CatalogueServiceDtoMapper;
 import com.cash.services.CatalogueService;
+import com.cash.services.UserService;
 import com.cash.grpc.catalogue.*;
 
 
 import io.grpc.StatusRuntimeException;
+import jakarta.servlet.http.HttpSession;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +24,8 @@ import java.util.Map;
 public class CatalogueController {
 
     private final CatalogueService catalogueService;
+ 
+
 
     @Autowired
     public CatalogueController(CatalogueService catalogueService) {
@@ -52,12 +57,21 @@ public class CatalogueController {
     }
 
     @PostMapping("/items")
-    public ResponseEntity<?> createItem(@RequestBody CatalogueItemRequestDto dto) {
+    public ResponseEntity<?> createItem(@RequestBody CatalogueItemRequestDto dto, HttpSession session) {
         try {
-            CreateItemRequest request = CatalogueServiceDtoMapper.toProto(dto);
+            Integer userId = (Integer) session.getAttribute("userId");
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "User must be signed in to create items"));
+            }
+
+            CreateItemRequest request = CatalogueServiceDtoMapper.toProto(dto, userId);
+
             ItemResponse response = catalogueService.createItem(request);
+
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(CatalogueServiceDtoMapper.fromProto(response));
+
         } catch (StatusRuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
