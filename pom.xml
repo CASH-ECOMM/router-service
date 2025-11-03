@@ -85,6 +85,11 @@
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-validation</artifactId>
 	</dependency>
+	<!-- Spring HATEOAS for REST links -->
+	<dependency>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-hateoas</artifactId>
+	</dependency>
 	<!-- gRPC dependencies -->
 		<dependency>
 			<groupId>net.devh</groupId>

@@ -4,12 +4,12 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.springframework.hateoas.RepresentationModel;
-import java.time.Instant;
 
 @Data
 @Builder
 @EqualsAndHashCode(callSuper = false)
-public class EndTimeResponseDto extends RepresentationModel<EndTimeResponseDto> {
-    private Instant endTime;
-    private int catalogueId;
+public class ErrorResponseDto extends RepresentationModel<ErrorResponseDto> {
+  private String message;
+  private String error;
+  private int status;
 }

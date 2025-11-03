@@ -1,9 +1,14 @@
 package com.cash.dtos;
+
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import org.springframework.hateoas.RepresentationModel;
+
 @Data
 @Builder
-public class CatalogueItemResponseDto {
+@EqualsAndHashCode(callSuper = false)
+public class CatalogueItemResponseDto extends RepresentationModel<CatalogueItemResponseDto> {
     private int id;
     private String title;
     private String description;
