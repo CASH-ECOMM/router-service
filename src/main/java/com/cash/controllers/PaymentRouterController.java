@@ -1,6 +1,7 @@
 package com.cash.controllers;
 
 import com.cash.dtos.TotalCostDTO;
+import com.cash.grpc.userservice.ValidateTokenResponse;
 import com.ecommerce.payment.grpc.*;
 import com.cash.dtos.PaymentRequestDTO;
 import com.cash.dtos.PaymentResponseDTO;
@@ -69,24 +70,27 @@ public class PaymentRouterController {
             )
     })
     public ResponseEntity<PaymentResponseDTO> processPayment(
-            @Valid @RequestBody PaymentRequestDTO request) {
-
-        log.info("Received payment request for user: {} and item: {}",
-                request.getUserId(), request.getItemId());
-        if (request.getUserId() <= 0) {
-            return ResponseEntity.badRequest().body(
-                    PaymentResponseDTO.builder().success(false).message("Invalid userId").build()
-            );
+            @Valid @RequestBody PaymentRequestDTO request,
+            jakarta.servlet.http.HttpServletRequest httpReq // read auth attrs
+    ) {
+        Integer authedUserId = com.cash.config.AuthenticatedUser.getUserId(httpReq);
+        if (authedUserId == null || authedUserId <= 0) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(PaymentResponseDTO.builder()
+                            .success(false)
+                            .message("No authenticated user in request")
+                            .build());
         }
+        log.info("Received payment request for user: {} (from interceptor) and item: {}",
+                authedUserId, request.getItemId());
         if (request.getItemId() <= 0) {
-            return ResponseEntity.badRequest().body(
-                    PaymentResponseDTO.builder().success(false).message("Invalid itemId").build()
-            );
+            return ResponseEntity.badRequest()
+                    .body(PaymentResponseDTO.builder().success(false).message("Invalid itemId").build());
         }
 
         try {
             // Get user information from User Service
-            GetUserResponse user = userService.getUser(request.getUserId());
+            GetUserResponse user = userService.getUser(authedUserId);
 //            if (!user.getSuccess()) {
 //                log.warn("User lookup failed for user {}", request.getUserId());
 //                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -118,9 +122,8 @@ public class PaymentRouterController {
                                 .message("Auction has not ended or no winner is determined yet.")
                                 .build());
             }
-            if (winnerResponse.getWinnerUserId() != request.getUserId()) {
+            if (winnerResponse.getWinnerUserId() != authedUserId) {
                 // caller is not the winner
-                log.warn("User {} is not winner for catalogue {}", request.getUserId(), request.getItemId());
                 return ResponseEntity.status(HttpStatus.FORBIDDEN) // 403
                         .body(PaymentResponseDTO.builder()
                                 .success(false)
@@ -134,6 +137,7 @@ public class PaymentRouterController {
             PaymentRequest grpcReq = PaymentServiceDtoMapper.toProto(
                     request,
                     user,
+                    authedUserId,
                     itemDetails.getItemId(),
                     finalAuctionPrice,               // int (whole dollars)
                     shippingCost,                            // int (whole dollars)
@@ -227,6 +231,7 @@ public class PaymentRouterController {
             var shipType = request.getShippingType() == null
                     ? PaymentRequestDTO.ShippingTypeDTO.REGULAR
                     : request.getShippingType();
+
             int shippingCost = calculateShippingCost(shipType, itemDetails.getBaseShippingCost());
 
             // Method 2: decide auction-based price
@@ -265,9 +270,18 @@ public class PaymentRouterController {
             );
 
             // Call RPC
-            TotalCostResponse rpcResp = paymentClient.calculateTotalCost(grpcReq);
+            TotalCostResponse rpc = paymentClient.calculateTotalCost(grpcReq);
+            double derivedShipping = round2(rpc.getTotalCost() - rpc.getHstAmount() - rpc.getItemCost());
+            int shippingCostEffective = (int) Math.round(derivedShipping);
             // Map to REST DTO
-            TotalCostDTO dto = PaymentServiceDtoMapper.fromProto(rpcResp);
+            TotalCostDTO dto = TotalCostDTO.builder()
+                    .itemCost(rpc.getItemCost())
+                    .shippingCost(shippingCostEffective)
+                    .hstRate(rpc.getHstRate())
+                    .hstAmount(rpc.getHstAmount())
+                    .totalCost(rpc.getTotalCost())
+                    .message(rpc.getMessage())
+                    .build();
 
             return ResponseEntity.ok(dto);
 
@@ -338,32 +352,45 @@ public class PaymentRouterController {
     /**
      * Get Payment History
      */
-    @GetMapping("/history/{userId}")
+    private static final int DEFAULT_HISTORY_SIZE = 10;
+    @GetMapping("/history")
     @Operation(
-            summary = "Get payment history",
-            description = "Retrieve payment history for a user"
+            summary = "My payment history (authenticated)",
+            description = "Returns payment history for the authenticated user. No input parameters."
     )
-    public ResponseEntity<?> getPaymentHistory(
-            @PathVariable int userId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "History returned"),
+            @ApiResponse(responseCode = "401", description = "Unauthenticated"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<?> getMyPaymentHistory(
+            jakarta.servlet.http.HttpServletRequest httpReq // CHANGE: read auth attrs
+    ){
+        Integer authedUserId = com.cash.config.AuthenticatedUser.getUserId(httpReq);
+        if (authedUserId == null || authedUserId <= 0) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "No authenticated user in request"));
+        }
 
-        log.info("Retrieving payment history for user: {}", userId);
+        log.info("Retrieving payment history for authenticated user: {}", authedUserId);
 
         try {
-            PaymentHistoryResponse resp = paymentClient.getHistory(userId, page, size);
-
+            // internally pick a default window
+            PaymentHistoryResponse resp = paymentClient.getHistory(authedUserId, 0, DEFAULT_HISTORY_SIZE);
 
             return ResponseEntity.ok(
                     resp.getPaymentsList().stream()
                             .map(PaymentServiceDtoMapper::fromProto)
                             .toList()
             );
-
-        } catch (StatusRuntimeException e) {
+        } catch (io.grpc.StatusRuntimeException e) {
             log.error("gRPC error while retrieving payment history", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error retrieving payment history");
+                    .body(Map.of("error", "Error retrieving payment history: " + e.getStatus().getDescription()));
+        } catch (Exception e) {
+            log.error("Unexpected error while retrieving payment history", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
@@ -421,6 +448,11 @@ public class PaymentRouterController {
     private int calculateShippingCost(PaymentRequestDTO.ShippingTypeDTO shippingType,
                                       int baseShippingCost) {
         return baseShippingCost;
+    }
+    private static double round2(double v) {
+        return new java.math.BigDecimal(v)
+                .setScale(2, java.math.RoundingMode.HALF_UP)
+                .doubleValue();
     }
 
 

@@ -60,6 +60,7 @@ public class PaymentService {
         return calculateTotalCost(req);
     }
 
+
     private static int nz(Integer v) { return v == null ? 0 : v; }
 
     private static ShippingType parseShippingType(String v) {

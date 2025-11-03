@@ -7,6 +7,7 @@ import lombok.*;
 @Data @NoArgsConstructor @AllArgsConstructor @Builder
 public class TotalCostDTO {
     @JsonProperty("item_cost")  @Schema(example = "100")  private int itemCost;
+    @JsonProperty("shipping_cost") @Schema(example = "15")  private int shippingCost;
     @JsonProperty("hst_rate")   @Schema(example = "0.13") private double hstRate;
     @JsonProperty("hst_amount") @Schema(example = "14.95")private double hstAmount;
     @JsonProperty("total_cost") @Schema(example = "129.95")private double totalCost;

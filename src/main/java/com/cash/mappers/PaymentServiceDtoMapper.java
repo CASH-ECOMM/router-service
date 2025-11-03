@@ -34,22 +34,18 @@ public final class PaymentServiceDtoMapper {
 //                .setUserId(uid)
 //                .build();
 //    }
-    private static UserInfo toPaymentUserInfo(GetUserResponse user, int fallbackUserId) {
+    private static UserInfo toPaymentUserInfo(GetUserResponse user, int resolvedUserId) {
         if (!user.getSuccess()) {
-            throw new IllegalArgumentException("User lookup failed: " + user.getMessage()); // CHANGE
+            throw new IllegalArgumentException("User lookup failed: " + user.getMessage());
         }
         if (!user.hasShippingAddress()) {
-            throw new IllegalArgumentException("User has no shipping address"); // CHANGE
+            throw new IllegalArgumentException("User has no shipping address");
         }
 
         var addr = user.getShippingAddress();
-        int uid = user.getUserId() > 0 ? user.getUserId() : fallbackUserId;
-        if (uid <= 0) {
-            throw new IllegalArgumentException("Resolved user id is invalid."); // CHANGE
-        }
 
         return UserInfo.newBuilder()
-                .setUserId(uid)                                   // CHANGE: crucial for payment service
+                .setUserId(resolvedUserId)                                   // CHANGE: crucial for payment service
                 .setFirstName(user.getFirstName())
                 .setLastName(user.getLastName())
                 .setStreet(addr.getStreetName())
@@ -63,11 +59,12 @@ public final class PaymentServiceDtoMapper {
     // Build a proto PaymentRequest from: UI DTO + aggregated data
     public static PaymentRequest toProto(PaymentRequestDTO dto,
                                          GetUserResponse user,
+                                         int authenticatedUserId,
                                          int itemId,
                                          int itemCostWholeDollars,
                                          int shippingCostWholeDollars,
                                          int estimatedDays) {
-        UserInfo userInfo = toPaymentUserInfo(user, dto.getUserId());
+        UserInfo userInfo = toPaymentUserInfo(user, authenticatedUserId);
 
         CreditCardInfo cc = CreditCardInfo.newBuilder()
                 .setCardNumber(dto.getCreditCard().getCardNumber())

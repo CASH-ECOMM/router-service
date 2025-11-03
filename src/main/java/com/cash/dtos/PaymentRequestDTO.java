@@ -22,9 +22,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class PaymentRequestDTO {
 
-    @Min(1)
-    @JsonAlias("user_id") // CHANGE
-    private int userId;
+    @Schema(hidden = true, description = "Ignored by server; derived from authenticated request.")
+    @JsonAlias("user_id")
+    private Integer userId;
 
     @Min(1)
     @JsonAlias("item_id") // CHANGE
