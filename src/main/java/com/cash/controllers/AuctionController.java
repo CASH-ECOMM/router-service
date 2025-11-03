@@ -48,12 +48,57 @@ public class AuctionController {
 
     @ApiResponse(responseCode = "200", description = "Auction started successfully", content = @Content(schema = @Schema(implementation = StartAuctionResponseDto.class)))
     @PostMapping("/{catalogueId}/start")
-    public ResponseEntity<StartAuctionResponseDto> startAuction(
-            @Parameter(description = "Catalogue item ID", required = true) @PathVariable int catalogueId,
-            HttpServletRequest request) {
-        Integer authUser = AuthenticatedUser.getUserId(request);
-        if (authUser == null) {
-            throw new UnauthorizedException("You need to be logged in to start an auction.");
+    public ResponseEntity<?> startAuction(@PathVariable int catalogueId, HttpServletRequest request) {
+        try {
+            Integer authUser = AuthenticatedUser.getUserId(request);
+            if (authUser == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("message", "You need to be logged in to start an auction."));
+            }
+
+            ItemResponse item;
+
+            try {
+                // Gets the item from the catalogue service
+                item = catalogueService.getItem(catalogueId);
+            } catch (StatusRuntimeException e) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Item not found in catalogue."));
+            }
+
+            if (authUser != item.getSellerId()) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("message", "You can only start an auction for your own items."));
+            }
+
+            String endTime = item.getEndTime();
+
+            // assume it's UTC
+            Instant instant = LocalDateTime.parse(endTime).toInstant(ZoneOffset.UTC);
+
+            Timestamp protoTimestamp = Timestamp.newBuilder()
+                    .setSeconds(instant.getEpochSecond())
+                    .setNanos(instant.getNano())
+                    .build();
+
+            StartAuctionResponse response = auctionService.startAuction(
+                    authUser,
+                    catalogueId,
+                    item.getStartingPrice(),
+                    protoTimestamp    // Converted end time from string to protobuf Timestamp
+            );
+
+            if (response.getSuccess()) {
+                return ResponseEntity.ok(Map.of(
+                        //"auctionId", response.getAuctionId(),
+                        "message", response.getMessage()));
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", response.getMessage()));
+            }
+        } catch (StatusRuntimeException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
         }
 
         // Gets the item from the catalogue service
