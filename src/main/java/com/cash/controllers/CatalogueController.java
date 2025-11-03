@@ -2,6 +2,7 @@ package com.cash.controllers;
 
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 
+import com.cash.config.AuthenticatedUser;
 import com.cash.dtos.CatalogueItemRequestDto;
 import com.cash.dtos.CatalogueItemResponseDto;
 import com.cash.grpc.catalogue.*;
@@ -15,6 +16,14 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import java.util.stream.Collectors;
+import com.cash.services.UserService;
+import com.cash.grpc.catalogue.*;
+
+
+import io.grpc.StatusRuntimeException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.http.HttpStatus;
@@ -27,6 +36,8 @@ import org.springframework.web.bind.annotation.*;
 public class CatalogueController {
 
     private final CatalogueService catalogueService;
+ 
+
 
     @Autowired
     public CatalogueController(CatalogueService catalogueService) {
@@ -84,6 +95,23 @@ public class CatalogueController {
         addLinksToItem(item);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(item);
+    public ResponseEntity<?> createItem(@RequestBody CatalogueItemRequestDto dto, HttpServletRequest request) {
+        try {
+            Integer userId = AuthenticatedUser.getUserId(request);
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "User must be signed in to create items"));
+            }
+
+            CreateItemRequest protoRequest = CatalogueServiceDtoMapper.toProto(dto, userId);
+            ItemResponse response = catalogueService.createItem(protoRequest);
+
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(CatalogueServiceDtoMapper.fromProto(response));
+        } catch (StatusRuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @Operation(summary = "Get catalogue item by ID", description = "Fetches a single catalogue item with HATEOAS links")

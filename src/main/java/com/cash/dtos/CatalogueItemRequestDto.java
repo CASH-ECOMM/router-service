@@ -19,9 +19,5 @@ public class CatalogueItemRequestDto {
     private int startingPrice;
 
     @Positive(message = "Duration hours must be positive")
-    private int durationHours;
-
-    @NotNull(message = "Seller ID is required")
-    @Positive(message = "Seller ID must be positive")
-    private int sellerId;
+    private int durationHours;    
 }
