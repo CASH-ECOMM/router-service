@@ -12,6 +12,8 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * Global exception handler for all controllers. Provides consistent error
@@ -96,6 +98,29 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex) {
         ErrorResponse error = ErrorResponse.of(HttpStatus.BAD_REQUEST.value(), ex.getMessage());
         return ResponseEntity.badRequest().body(error);
+    }
+
+    /**
+     * Handles NoResourceFoundException for undefined routes.
+     * Returns 404 Not Found when accessing non-existent endpoints.
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFoundException(NoResourceFoundException ex) {
+        String path = ex.getResourcePath();
+        String message = String.format("Route not found: %s", path);
+        ErrorResponse error = ErrorResponse.of(HttpStatus.NOT_FOUND.value(), message);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    /**
+     * Handles NoHandlerFoundException for undefined routes.
+     * Returns 404 Not Found when no handler is found for the request.
+     */
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoHandlerFoundException(NoHandlerFoundException ex) {
+        String message = String.format("Route not found: %s %s", ex.getHttpMethod(), ex.getRequestURL());
+        ErrorResponse error = ErrorResponse.of(HttpStatus.NOT_FOUND.value(), message);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
 
     /** Handles all other uncaught exceptions. Returns 500 Internal Server Error. */
