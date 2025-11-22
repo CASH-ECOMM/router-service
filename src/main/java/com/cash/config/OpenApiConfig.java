@@ -10,7 +10,9 @@ import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.servers.Server;
 import org.springdoc.core.customizers.OpenApiCustomizer;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -23,13 +25,16 @@ import org.springframework.context.annotation.Configuration;
 @OpenAPIDefinition(info = @Info(title = "Cash E-Commerce Router Service API", version = "1.0", description = "REST API Gateway for microservices including Catalogue, Auction, and User services"))
 public class OpenApiConfig {
 
+    @Value("${server.url:}")
+    private String serverUrl;
+
     /**
      * Configures the base OpenAPI specification. Includes JWT bearer token security
-     * scheme.
+     * scheme and server URL.
      */
     @Bean
     public OpenAPI customOpenAPI() {
-        return new OpenAPI()
+        OpenAPI openAPI = new OpenAPI()
                 .components(
                         new Components()
                                 // JWT Security Scheme
@@ -40,6 +45,13 @@ public class OpenApiConfig {
                                                 .scheme("bearer")
                                                 .bearerFormat("JWT")))
                 .addSecurityItem(new SecurityRequirement().addList("bearer-jwt"));
+
+        // Add server URL if configured (for Railway deployment)
+        if (serverUrl != null && !serverUrl.isEmpty()) {
+            openAPI.addServersItem(new Server().url(serverUrl).description("Production server"));
+        }
+
+        return openAPI;
     }
 
     /**
