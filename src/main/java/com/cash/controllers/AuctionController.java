@@ -148,6 +148,7 @@ public class AuctionController {
                 .success(true)
                 .message(response.getMessage())
                 .catalogueId(catalogueId)
+                .bidAmount(bidRequest.getAmount())
                 .build();
 
         // Add HATEOAS links
