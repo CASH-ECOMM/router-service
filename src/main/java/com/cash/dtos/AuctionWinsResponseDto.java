@@ -8,4 +8,5 @@ import lombok.Data;
 public class AuctionWinsResponseDto {
     private int finalPrice;
     private int catalogueId;
+    private String itemName;
 }

@@ -278,6 +278,8 @@ public class AuctionController {
         return ResponseEntity.ok(dto);
     }
 
+    @Operation(summary = "Get user auction wins", description = "Retrieves all auction wins for a specific user")
+    @ApiResponse(responseCode = "200", description = "User auction wins retrieved successfully", content = @Content(schema = @Schema(implementation = AuctionWinsResponseDto.class)))
     @GetMapping("/{userId}/wins")
     public ResponseEntity<List<AuctionWinsResponseDto>> getUserWins(@Parameter(description = "User Id", required = true) @PathVariable int userId,
                                                                     HttpServletRequest request) {
@@ -302,6 +304,7 @@ public class AuctionController {
                 AuctionWinsResponseDto winDto = AuctionWinsResponseDto.builder()
                         .catalogueId(item.getId())
                         .finalPrice(auctionWinnerResponse.getFinalPrice())
+                        .itemName(item.getTitle())
                         .build();
                 wins.add(winDto);
             }
