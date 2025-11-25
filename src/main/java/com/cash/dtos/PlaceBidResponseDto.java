@@ -12,4 +12,5 @@ public class PlaceBidResponseDto extends RepresentationModel<PlaceBidResponseDto
   private boolean success;
   private String message;
   private int catalogueId;
+  private int bidAmount;
 }
