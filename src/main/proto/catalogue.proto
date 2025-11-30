@@ -11,6 +11,8 @@ service CatalogueService {
   rpc SearchItems(SearchRequest) returns (ItemList);
   rpc CreateItem(CreateItemRequest) returns (ItemResponse);
   rpc GetItem(GetItemRequest) returns (ItemResponse);
+  rpc DeactivateItem(DeactivateItemRequest) returns (DeactivateItemResponse);
+
 }
 
 message Empty {}
@@ -48,4 +50,12 @@ message ItemResponse {
 
 message ItemList {
   repeated ItemResponse items = 1;
+}
+message DeactivateItemRequest {
+  int32 id = 1;
+}
+
+message DeactivateItemResponse {
+  bool success = 1;
+  string message = 2;
 }
