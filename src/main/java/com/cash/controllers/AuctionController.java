@@ -300,7 +300,7 @@ public class AuctionController {
 
         for (CatalogueItemResponseDto item : items) {
             GetAuctionWinnerResponse auctionWinnerResponse = auctionService.getAuctionWinner(item.getId());
-            if (auctionWinnerResponse.getFound() && auctionWinnerResponse.getWinnerUserId() == userId) {
+            if (auctionWinnerResponse.getFound() && auctionWinnerResponse.getWinnerUserId() == userId && item.isActive()) {
                 AuctionWinsResponseDto winDto = AuctionWinsResponseDto.builder()
                         .catalogueId(item.getId())
                         .finalPrice(auctionWinnerResponse.getFinalPrice())
