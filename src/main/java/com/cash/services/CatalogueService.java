@@ -28,5 +28,16 @@ public class CatalogueService {
             .build();
      return blockingStub.getItem(request);
     }
+    
+    public DeactivateItemResponse deactivateItem(int id) {
+    DeactivateItemRequest request = DeactivateItemRequest.newBuilder()
+            .setId(id)
+            .build();
+
+    return blockingStub.deactivateItem(request);
+}
+
+    
+    
 
 }

@@ -135,5 +135,22 @@ public class CatalogueController {
         }
 
         return item;
+    
     }
+
+    @Operation(summary = "Deactivate catalogue item", description = "Deactivates an active item")
+    @PatchMapping("/items/{id}/deactivate")
+    public ResponseEntity<?> deactivateItem(@PathVariable int id, HttpServletRequest request) {
+
+        Integer userId = AuthenticatedUser.getUserId(request);
+        if (userId == null) {
+            throw new com.cash.exceptions.UnauthorizedException("User must be signed in to deactivate items");
+        }
+
+        DeactivateItemResponse grpcResponse = catalogueService.deactivateItem(id);
+
+        return ResponseEntity.ok(grpcResponse.getMessage());
+    }
+
+
 }

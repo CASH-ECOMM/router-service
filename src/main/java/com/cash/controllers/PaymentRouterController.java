@@ -110,6 +110,16 @@ public class PaymentRouterController {
 
             log.info("Payment processed successfully with ID: {}", dto.getPaymentId());
 
+            if (grpcResp.getSuccess()) {
+                try {
+                    log.info("Item {} deactivated after successful payment. Message: {}",
+                            request.getItemId(),
+                            catalogueService.deactivateItem(request.getItemId()).getMessage());
+                } catch (Exception e) {
+                    log.error("Failed to deactivate item {} after payment", request.getItemId(), e);
+                }
+            }
+
             // Add HATEOAS links
             dto.add(linkTo(methodOn(PaymentRouterController.class)
                     .processPayment(request, httpReq)).withSelfRel());
