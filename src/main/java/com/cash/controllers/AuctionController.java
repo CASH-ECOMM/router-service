@@ -306,6 +306,29 @@ public class AuctionController {
                         .finalPrice(auctionWinnerResponse.getFinalPrice())
                         .itemName(item.getTitle())
                         .build();
+
+                // Add HATEOAS links
+                winDto.add(
+                        linkTo(methodOn(AuctionController.class)
+                                .getAuctionStatus(item.getId()))
+                                .withRel("auction-status"));
+                winDto.add(
+                        linkTo(methodOn(AuctionController.class)
+                                .getAuctionWinner(item.getId()))
+                                .withRel("auction-winner"));
+                winDto.add(
+                        linkTo(methodOn(AuctionController.class)
+                                .getAuctionEnd(item.getId()))
+                                .withRel("auction-end"));
+                winDto.add(
+                        linkTo(methodOn(CatalogueController.class)
+                                .getItem(item.getId()))
+                                .withRel("catalogue-item"));
+                winDto.add(
+                        linkTo(methodOn(PaymentRouterController.class)
+                                .processPayment(null, null))
+                                .withRel("process-payment"));
+
                 wins.add(winDto);
             }
         }
