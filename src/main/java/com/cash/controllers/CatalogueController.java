@@ -7,13 +7,19 @@ import com.cash.dtos.CatalogueItemRequestDto;
 import com.cash.dtos.CatalogueItemResponseDto;
 import com.cash.grpc.catalogue.*;
 import com.cash.mappers.CatalogueServiceDtoMapper;
+import com.cash.services.AuctionService;
 import com.cash.services.CatalogueService;
+import com.google.protobuf.Timestamp;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -31,10 +37,12 @@ import org.springframework.web.bind.annotation.*;
 public class CatalogueController {
 
     private final CatalogueService catalogueService;
+    private final AuctionService auctionService;
 
     @Autowired
-    public CatalogueController(CatalogueService catalogueService) {
+    public CatalogueController(CatalogueService catalogueService, AuctionService auctionService) {
         this.catalogueService = catalogueService;
+        this.auctionService = auctionService;
     }
 
     @Operation(summary = "Get all catalogue items", description = "Fetches all items in the catalogue")
@@ -88,6 +96,16 @@ public class CatalogueController {
 
         CreateItemRequest protoRequest = CatalogueServiceDtoMapper.toProto(dto, userId);
         ItemResponse response = catalogueService.createItem(protoRequest);
+
+        String endTime = response.getEndTime();
+        Instant instant = LocalDateTime.parse(endTime).toInstant(ZoneOffset.UTC);
+
+        Timestamp protoTimestamp = Timestamp.newBuilder()
+                .setSeconds(instant.getEpochSecond())
+                .setNanos(instant.getNano())
+                .build();
+        auctionService.startAuction(userId, response.getId(), response.getStartingPrice(),
+                protoTimestamp);
         CatalogueItemResponseDto item = CatalogueServiceDtoMapper.fromProto(response);
 
         // Add HATEOAS links
