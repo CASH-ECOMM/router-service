@@ -8,8 +8,10 @@ import com.cash.dtos.*;
 import com.cash.exceptions.ResourceNotFoundException;
 import com.cash.exceptions.UnauthorizedException;
 import com.cash.grpc.auctionservice.*;
+import com.cash.grpc.catalogue.ItemList;
 import com.cash.grpc.catalogue.ItemResponse;
 import com.cash.mappers.AuctionServiceDtoMapper;
+import com.cash.mappers.CatalogueServiceDtoMapper;
 import com.cash.services.AuctionService;
 import com.cash.services.CatalogueService;
 import com.google.protobuf.Timestamp;
@@ -26,7 +28,9 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Map;
+import java.util.List;
 
+import org.apache.coyote.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -272,5 +276,63 @@ public class AuctionController {
                         .withRel("auction-end"));
 
         return ResponseEntity.ok(dto);
+    }
+
+    @Operation(summary = "Get user auction wins", description = "Retrieves all auction wins for a specific user")
+    @ApiResponse(responseCode = "200", description = "User auction wins retrieved successfully", content = @Content(schema = @Schema(implementation = AuctionWinsResponseDto.class)))
+    @GetMapping("/{userId}/wins")
+    public ResponseEntity<List<AuctionWinsResponseDto>> getUserWins(@Parameter(description = "User Id", required = true) @PathVariable int userId,
+                                                                    HttpServletRequest request) {
+
+        Integer authUser = AuthenticatedUser.getUserId(request);
+
+        if (authUser == null) {
+            throw new UnauthorizedException("You need to be logged in to view your auction wins.");
+        }
+
+        if (authUser != userId) {
+            throw new UnauthorizedException("You can only view your own auction wins.");
+        }
+
+        ItemList response = catalogueService.getAllItems();
+        List<CatalogueItemResponseDto> items = CatalogueServiceDtoMapper.fromProtoList(response.getItemsList());
+        List<AuctionWinsResponseDto> wins = new java.util.ArrayList<>();
+
+        for (CatalogueItemResponseDto item : items) {
+            GetAuctionWinnerResponse auctionWinnerResponse = auctionService.getAuctionWinner(item.getId());
+            if (auctionWinnerResponse.getFound() && auctionWinnerResponse.getWinnerUserId() == userId && item.isActive()) {
+                AuctionWinsResponseDto winDto = AuctionWinsResponseDto.builder()
+                        .catalogueId(item.getId())
+                        .finalPrice(auctionWinnerResponse.getFinalPrice())
+                        .itemName(item.getTitle())
+                        .build();
+
+                // Add HATEOAS links
+                winDto.add(
+                        linkTo(methodOn(AuctionController.class)
+                                .getAuctionStatus(item.getId()))
+                                .withRel("auction-status"));
+                winDto.add(
+                        linkTo(methodOn(AuctionController.class)
+                                .getAuctionWinner(item.getId()))
+                                .withRel("auction-winner"));
+                winDto.add(
+                        linkTo(methodOn(AuctionController.class)
+                                .getAuctionEnd(item.getId()))
+                                .withRel("auction-end"));
+                winDto.add(
+                        linkTo(methodOn(CatalogueController.class)
+                                .getItem(item.getId()))
+                                .withRel("catalogue-item"));
+                winDto.add(
+                        linkTo(methodOn(PaymentRouterController.class)
+                                .processPayment(null, null))
+                                .withRel("process-payment"));
+
+                wins.add(winDto);
+            }
+        }
+
+        return ResponseEntity.ok(wins);
     }
 }
